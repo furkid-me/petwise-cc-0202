@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: petwise-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-petwise}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-petwise123}
+      POSTGRES_DB: ${POSTGRES_DB:-petwise}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-petwise}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PetWise Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: petwise-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-petwise}:${POSTGRES_PASSWORD:-petwise123}@db:5432/${POSTGRES_DB:-petwise}
+      NEXT_PUBLIC_LIFF_ID: ${NEXT_PUBLIC_LIFF_ID}
+      LINE_CHANNEL_ID: ${LINE_CHANNEL_ID}
+      LINE_CHANNEL_SECRET: ${LINE_CHANNEL_SECRET}
+      LINE_CHANNEL_ACCESS_TOKEN: ${LINE_CHANNEL_ACCESS_TOKEN}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+
+  # Redis (for caching and session storage - optional)
+  redis:
+    image: redis:7-alpine
+    container_name: petwise-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+
+volumes:
+  postgres_data:
+  redis_data:
