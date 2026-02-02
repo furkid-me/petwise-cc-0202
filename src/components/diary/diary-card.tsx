@@ -1,0 +1,99 @@
+'use client';
+
+import Image from 'next/image';
+import { formatDate, getCategoryIcon, getCategoryLabel, getCategoryColor } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Pin, AlertCircle } from 'lucide-react';
+import type { Diary } from '@/types';
+
+interface DiaryCardProps {
+  diary: Diary;
+  onClick?: () => void;
+}
+
+export function DiaryCard({ diary, onClick }: DiaryCardProps) {
+  const categoryVariant = diary.category.toLowerCase() as 'food' | 'health' | 'activity' | 'medical' | 'grooming' | 'behavior' | 'other';
+
+  return (
+    <Card
+      className="cursor-pointer transition-shadow hover:shadow-md"
+      onClick={onClick}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Category Icon */}
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl"
+            style={{ backgroundColor: `${getCategoryColor(diary.category)}20` }}
+          >
+            {getCategoryIcon(diary.category)}
+          </div>
+
+          {/* Content */}
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-center gap-2">
+              <Badge variant={categoryVariant}>
+                {getCategoryLabel(diary.category)}
+              </Badge>
+              {diary.subCategory && (
+                <span className="text-xs text-muted-foreground">
+                  {diary.subCategory}
+                </span>
+              )}
+              {diary.isPinned && (
+                <Pin className="h-3 w-3 text-primary" />
+              )}
+              {diary.isImportant && (
+                <AlertCircle className="h-3 w-3 text-destructive" />
+              )}
+            </div>
+
+            <p className="line-clamp-2 text-sm">{diary.content}</p>
+
+            {/* Photos Preview */}
+            {diary.photos.length > 0 && (
+              <div className="mt-2 flex gap-1">
+                {diary.photos.slice(0, 3).map((photo, index) => (
+                  <div
+                    key={index}
+                    className="relative h-12 w-12 overflow-hidden rounded"
+                  >
+                    <Image
+                      src={photo}
+                      alt=""
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+                {diary.photos.length > 3 && (
+                  <div className="flex h-12 w-12 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+                    +{diary.photos.length - 3}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Mood/Severity */}
+            {(diary.mood || diary.severity) && (
+              <div className="mt-2 flex gap-2 text-xs text-muted-foreground">
+                {diary.mood && (
+                  <span>心情: {'😊'.repeat(diary.mood)}</span>
+                )}
+                {diary.severity && (
+                  <span>嚴重度: {diary.severity}/5</span>
+                )}
+              </div>
+            )}
+
+            {/* Time */}
+            <p className="mt-2 text-xs text-muted-foreground">
+              {formatDate(diary.occurredAt, 'relative')}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

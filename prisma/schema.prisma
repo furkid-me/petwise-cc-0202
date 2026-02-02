@@ -1,0 +1,360 @@
+// PetWise - LINE LIFF 寵物日記系統資料庫架構
+// Database: PostgreSQL
+// ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用戶相關 ====================
+
+// 用戶資料表
+model User {
+  id              String    @id @default(cuid())
+  lineUserId      String    @unique @map("line_user_id")
+  displayName     String?   @map("display_name")
+  pictureUrl      String?   @map("picture_url")
+  statusMessage   String?   @map("status_message")
+  email           String?
+
+  // 訂閱相關
+  subscriptionPlan  SubscriptionPlan @default(FREE) @map("subscription_plan")
+  subscriptionStart DateTime?        @map("subscription_start")
+  subscriptionEnd   DateTime?        @map("subscription_end")
+
+  // 設定
+  timezone        String    @default("Asia/Taipei")
+  language        String    @default("zh-TW")
+  notifyEnabled   Boolean   @default(true) @map("notify_enabled")
+
+  // 時間戳記
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  lastLoginAt     DateTime? @map("last_login_at")
+
+  // 關聯
+  pets            Pet[]
+  diaries         Diary[]
+  reminders       Reminder[]
+  familyMembers   FamilyMember[]
+  payments        Payment[]
+
+  @@map("users")
+}
+
+// 訂閱方案枚舉
+enum SubscriptionPlan {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+// 家庭成員（共享功能）
+model FamilyMember {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  memberLineUserId String @map("member_line_user_id")
+  memberName  String   @map("member_name")
+  role        FamilyRole @default(VIEWER)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, memberLineUserId])
+  @@map("family_members")
+}
+
+enum FamilyRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// ==================== 寵物相關 ====================
+
+// 寵物資料表
+model Pet {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+
+  // 基本資料
+  name            String
+  species         PetSpecies
+  breed           String?
+  gender          PetGender?
+  birthday        DateTime?
+  adoptionDate    DateTime? @map("adoption_date")
+
+  // 外觀特徵
+  color           String?
+  weight          Decimal?  @db.Decimal(5, 2)
+  photoUrl        String?   @map("photo_url")
+
+  // 健康資訊
+  isNeutered      Boolean   @default(false) @map("is_neutered")
+  microchipId     String?   @map("microchip_id")
+  medicalNotes    String?   @map("medical_notes")
+  allergies       String[]
+
+  // 狀態
+  isActive        Boolean   @default(true) @map("is_active")
+  isDefault       Boolean   @default(false) @map("is_default")
+
+  // 時間戳記
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // 關聯
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  diaries         Diary[]
+  reminders       Reminder[]
+  weightRecords   WeightRecord[]
+
+  @@map("pets")
+}
+
+enum PetSpecies {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  HAMSTER
+  FISH
+  REPTILE
+  OTHER
+}
+
+enum PetGender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+// 體重紀錄（用於追蹤趨勢）
+model WeightRecord {
+  id          String   @id @default(cuid())
+  petId       String   @map("pet_id")
+  weight      Decimal  @db.Decimal(5, 2)
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+
+  pet         Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("weight_records")
+}
+
+// ==================== 日記相關 ====================
+
+// 日記資料表
+model Diary {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  petId           String    @map("pet_id")
+
+  // 原始輸入
+  rawInput        String?   @map("raw_input")
+
+  // 解析後內容
+  category        DiaryCategory
+  subCategory     String?   @map("sub_category")
+  content         String
+
+  // 詳細資料（JSON 格式，根據分類不同有不同結構）
+  details         Json?
+
+  // 情緒/嚴重程度（1-5）
+  mood            Int?
+  severity        Int?
+
+  // 媒體
+  photos          String[]
+
+  // 時間
+  occurredAt      DateTime  @default(now()) @map("occurred_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // 標記
+  isPinned        Boolean   @default(false) @map("is_pinned")
+  isImportant     Boolean   @default(false) @map("is_important")
+
+  // 關聯
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet             Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  tags            DiaryTag[]
+
+  @@index([userId, petId, occurredAt])
+  @@index([category])
+  @@map("diaries")
+}
+
+// 日記分類枚舉
+enum DiaryCategory {
+  FOOD        // 飲食
+  HEALTH      // 健康
+  ACTIVITY    // 活動
+  MEDICAL     // 醫療
+  GROOMING    // 美容
+  BEHAVIOR    // 行為
+  OTHER       // 其他
+}
+
+// 標籤（用於搜尋和分類）
+model Tag {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  color       String?
+
+  diaries     DiaryTag[]
+
+  @@map("tags")
+}
+
+model DiaryTag {
+  diaryId     String    @map("diary_id")
+  tagId       String    @map("tag_id")
+
+  diary       Diary     @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+  tag         Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([diaryId, tagId])
+  @@map("diary_tags")
+}
+
+// ==================== 提醒相關 ====================
+
+// 提醒資料表
+model Reminder {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  petId           String?   @map("pet_id")
+
+  // 提醒內容
+  title           String
+  description     String?
+  category        ReminderCategory
+
+  // 時間設定
+  remindAt        DateTime  @map("remind_at")
+  repeatType      RepeatType @default(NONE) @map("repeat_type")
+  repeatInterval  Int?      @map("repeat_interval")
+  repeatEndAt     DateTime? @map("repeat_end_at")
+
+  // 狀態
+  isActive        Boolean   @default(true) @map("is_active")
+  isCompleted     Boolean   @default(false) @map("is_completed")
+  completedAt     DateTime? @map("completed_at")
+
+  // LINE 通知
+  notifySent      Boolean   @default(false) @map("notify_sent")
+  notifySentAt    DateTime? @map("notify_sent_at")
+
+  // 時間戳記
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // 關聯
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet             Pet?      @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([userId, remindAt])
+  @@index([isActive, remindAt])
+  @@map("reminders")
+}
+
+enum ReminderCategory {
+  VACCINE       // 疫苗
+  DEWORMING     // 驅蟲
+  GROOMING      // 美容
+  CHECKUP       // 健檢
+  MEDICATION    // 用藥
+  FOOD          // 餵食
+  OTHER         // 其他
+}
+
+enum RepeatType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  CUSTOM
+}
+
+// ==================== 付款相關 ====================
+
+// 付款紀錄
+model Payment {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+
+  // 付款資訊
+  amount          Decimal   @db.Decimal(10, 2)
+  currency        String    @default("TWD")
+  plan            SubscriptionPlan
+
+  // LINE Pay / 其他支付
+  paymentMethod   String    @map("payment_method")
+  transactionId   String?   @map("transaction_id")
+
+  // 狀態
+  status          PaymentStatus @default(PENDING)
+
+  // 訂閱期間
+  periodStart     DateTime  @map("period_start")
+  periodEnd       DateTime  @map("period_end")
+
+  // 時間戳記
+  createdAt       DateTime  @default(now()) @map("created_at")
+  paidAt          DateTime? @map("paid_at")
+
+  // 關聯
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// ==================== 系統相關 ====================
+
+// AI 解析日誌（用於改進解析品質）
+model AiParseLog {
+  id              String    @id @default(cuid())
+
+  // 輸入輸出
+  rawInput        String    @map("raw_input")
+  parsedOutput    Json      @map("parsed_output")
+
+  // 評估
+  wasAccepted     Boolean?  @map("was_accepted")
+  userFeedback    String?   @map("user_feedback")
+
+  // 時間
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("ai_parse_logs")
+}
+
+// 系統設定
+model SystemSetting {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  value       Json
+  description String?
+
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
