@@ -1,9 +1,11 @@
-import liff from '@line/liff';
+import type { Liff } from '@line/liff';
 
+let liff: Liff | null = null;
 let isInitialized = false;
 
 export async function initLiff(): Promise<void> {
   if (isInitialized) return;
+  if (typeof window === 'undefined') return;
 
   const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
 
@@ -13,6 +15,8 @@ export async function initLiff(): Promise<void> {
   }
 
   try {
+    const liffModule = await import('@line/liff');
+    liff = liffModule.default;
     await liff.init({ liffId });
     isInitialized = true;
     console.log('LIFF initialized successfully');
@@ -23,16 +27,19 @@ export async function initLiff(): Promise<void> {
 }
 
 export function isLoggedIn(): boolean {
+  if (!liff || !isInitialized) return false;
   return liff.isLoggedIn();
 }
 
 export function login(): void {
+  if (!liff || !isInitialized) return;
   if (!liff.isLoggedIn()) {
     liff.login();
   }
 }
 
 export function logout(): void {
+  if (!liff || !isInitialized) return;
   if (liff.isLoggedIn()) {
     liff.logout();
     window.location.reload();
@@ -40,6 +47,9 @@ export function logout(): void {
 }
 
 export async function getProfile() {
+  if (!liff || !isInitialized) {
+    throw new Error('LIFF is not initialized');
+  }
   if (!liff.isLoggedIn()) {
     throw new Error('User is not logged in');
   }
@@ -47,22 +57,27 @@ export async function getProfile() {
 }
 
 export function getAccessToken(): string | null {
+  if (!liff || !isInitialized) return null;
   return liff.getAccessToken();
 }
 
 export function isInClient(): boolean {
+  if (!liff || !isInitialized) return false;
   return liff.isInClient();
 }
 
 export function getOS(): string {
+  if (!liff || !isInitialized) return 'unknown';
   return liff.getOS() || 'unknown';
 }
 
 export function getLanguage(): string {
+  if (!liff || !isInitialized) return 'zh-TW';
   return liff.getLanguage() || 'zh-TW';
 }
 
 export function closeWindow(): void {
+  if (!liff || !isInitialized) return;
   if (liff.isInClient()) {
     liff.closeWindow();
   }
@@ -70,6 +85,7 @@ export function closeWindow(): void {
 
 // 分享訊息到 LINE
 export async function shareMessage(message: string): Promise<void> {
+  if (!liff || !isInitialized) return;
   if (!liff.isInClient()) {
     console.warn('shareMessage is only available in LINE app');
     return;
@@ -85,6 +101,7 @@ export async function shareMessage(message: string): Promise<void> {
 
 // 掃描 QR Code
 export async function scanCode(): Promise<string | null> {
+  if (!liff || !isInitialized) return null;
   if (!liff.isInClient()) {
     console.warn('scanCode is only available in LINE app');
     return null;
@@ -128,4 +145,6 @@ export async function selectMultipleImages(maxCount: number = 5): Promise<File[]
   });
 }
 
-export default liff;
+export function getLiff(): Liff | null {
+  return liff;
+}
