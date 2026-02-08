@@ -20,6 +20,8 @@ export async function initLiff(): Promise<void> {
     await liff.init({ liffId });
     isInitialized = true;
     console.log('LIFF initialized successfully');
+    console.log('Is in LINE client:', liff.isInClient());
+    console.log('Is logged in after init:', liff.isLoggedIn());
   } catch (error) {
     console.error('LIFF initialization failed:', error);
     throw error;
@@ -38,6 +40,17 @@ export function login(): void {
   }
   if (!liff.isLoggedIn()) {
     console.log('Triggering LIFF login...');
+    console.log('Is in client:', liff.isInClient());
+
+    // If in LINE client, user should already be logged in
+    // If not, there might be an issue with the LIFF setup
+    if (liff.isInClient()) {
+      console.log('In LINE client but not logged in - this is unexpected');
+      // Try to reload the page to reinitialize
+      window.location.reload();
+      return;
+    }
+
     liff.login({ redirectUri: window.location.href });
   }
 }

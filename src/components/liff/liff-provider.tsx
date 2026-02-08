@@ -45,20 +45,32 @@ export function LiffProvider({ children }: LiffProviderProps) {
     const init = async () => {
       try {
         setLoading(true);
+        console.log('Starting LIFF initialization...');
 
         // Initialize LIFF
         await initLiff();
+        console.log('LIFF initialized, checking login status...');
 
         // Check if user is logged in
-        if (!isLoggedIn()) {
+        const loggedIn = isLoggedIn();
+        console.log('Is logged in:', loggedIn);
+
+        if (!loggedIn) {
           // Mark as redirecting and trigger login
+          console.log('User not logged in, triggering login...');
           setIsRedirecting(true);
-          login();
+
+          // Small delay to ensure state is set before redirect
+          setTimeout(() => {
+            login();
+          }, 100);
           return;
         }
 
+        console.log('User is logged in, getting profile...');
         // Get LINE profile
         const profile = await getProfile();
+        console.log('Got profile:', profile.displayName);
         setLineProfile({
           userId: profile.userId,
           displayName: profile.displayName,
@@ -67,8 +79,11 @@ export function LiffProvider({ children }: LiffProviderProps) {
 
         // Authenticate with our backend
         const accessToken = getAccessToken();
+        console.log('Access token exists:', !!accessToken);
+
         if (accessToken) {
           const authResult = await api.auth.login(accessToken);
+          console.log('Auth result:', authResult.success);
 
           if (authResult.success && authResult.data) {
             const { user } = authResult.data as { user: User };
