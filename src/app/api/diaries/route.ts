@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
               category: entry.category,
               subCategory: entry.subCategory,
               content: entry.content,
-              details: entry.details as Record<string, unknown>,
+              details: entry.details ? JSON.parse(JSON.stringify(entry.details)) : undefined,
               mood: entry.mood,
               severity: entry.severity,
               photos: photos || [],
