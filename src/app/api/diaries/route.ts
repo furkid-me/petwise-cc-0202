@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       await prisma.aiParseLog.create({
         data: {
           rawInput,
-          parsedOutput: parseResult as unknown as Record<string, unknown>,
+          parsedOutput: JSON.parse(JSON.stringify(parseResult)),
         },
       });
 
