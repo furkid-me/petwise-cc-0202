@@ -102,7 +102,13 @@ export function LiffProvider({ children }: LiffProviderProps) {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
-          <p className="text-muted-foreground">正在跳轉到 LINE 登入...</p>
+          <p className="text-muted-foreground mb-4">正在跳轉到 LINE 登入...</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-sm text-primary underline"
+          >
+            如果沒有跳轉，請點此重試
+          </button>
         </div>
       </div>
     );

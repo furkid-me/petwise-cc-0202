@@ -32,9 +32,13 @@ export function isLoggedIn(): boolean {
 }
 
 export function login(): void {
-  if (!liff || !isInitialized) return;
+  if (!liff || !isInitialized) {
+    console.error('LIFF not initialized, cannot login');
+    return;
+  }
   if (!liff.isLoggedIn()) {
-    liff.login();
+    console.log('Triggering LIFF login...');
+    liff.login({ redirectUri: window.location.href });
   }
 }
 
