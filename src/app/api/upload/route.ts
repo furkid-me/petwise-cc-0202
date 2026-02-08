@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { SUBSCRIPTION_LIMITS } from '@/types';
+import { SUBSCRIPTION_LIMITS, SubscriptionPlan } from '@/types';
 
 // Note: This is a placeholder implementation
 // In production, you would integrate with a cloud storage service like:
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check subscription limits for photos per entry
-    const limits = SUBSCRIPTION_LIMITS[user.subscriptionPlan];
+    const limits = SUBSCRIPTION_LIMITS[user.subscriptionPlan as SubscriptionPlan];
     // Note: In a real implementation, you would track photos per diary entry
 
     // In production, upload to cloud storage here

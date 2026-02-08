@@ -22,6 +22,7 @@ export interface ParsedDiaryEntry {
 export interface ParseResult {
   entries: ParsedDiaryEntry[];
   summary: string;
+  healthWarning?: string;
 }
 
 const SYSTEM_PROMPT = `你是一個寵物日記助手，專門解析飼主對寵物的口語化描述。

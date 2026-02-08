@@ -43,7 +43,7 @@ export async function GET(
       success: true,
       data: {
         ...diary,
-        tags: diary.tags.map(dt => dt.tag),
+        tags: diary.tags.map((dt: { tag: { id: string; name: string; color: string | null } }) => dt.tag),
       },
     });
   } catch (error) {

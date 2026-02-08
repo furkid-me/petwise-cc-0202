@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get total count
-    const totalCount = categoryStats.reduce((sum, stat) => sum + stat._count.id, 0);
+    const totalCount = categoryStats.reduce((sum: number, stat: { _count: { id: number } }) => sum + stat._count.id, 0);
 
     // Get daily counts for trend
     const dailyStats = await prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
@@ -142,12 +142,12 @@ export async function GET(request: NextRequest) {
           endDate: new Date(),
         },
         totalEntries: totalCount,
-        categoryBreakdown: categoryStats.map((stat) => ({
+        categoryBreakdown: categoryStats.map((stat: { category: string; _count: { id: number } }) => ({
           category: stat.category,
           count: stat._count.id,
           percentage: totalCount > 0 ? Math.round((stat._count.id / totalCount) * 100) : 0,
         })),
-        dailyTrend: dailyStats.map((stat) => ({
+        dailyTrend: dailyStats.map((stat: { date: Date; count: bigint }) => ({
           date: stat.date,
           count: Number(stat.count),
         })),

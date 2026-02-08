@@ -44,8 +44,8 @@ export function errorResponse(
     {
       success: false,
       error,
-      ...(code && { code }),
-      ...(details && { details }),
+      ...(code ? { code } : {}),
+      ...(details ? { details } : {}),
     },
     { status }
   );

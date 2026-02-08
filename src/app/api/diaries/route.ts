@@ -67,9 +67,9 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform tags
-    const transformedDiaries = diaries.map(diary => ({
+    const transformedDiaries = diaries.map((diary: { tags: { tag: { id: string; name: string; color: string | null } }[]; [key: string]: unknown }) => ({
       ...diary,
-      tags: diary.tags.map(dt => dt.tag),
+      tags: diary.tags.map((dt: { tag: { id: string; name: string; color: string | null } }) => dt.tag),
     }));
 
     return NextResponse.json({

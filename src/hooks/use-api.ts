@@ -100,11 +100,15 @@ export const api = {
 
   // Diaries
   diaries: {
-    list: (params?: { petId?: string; page?: number; limit?: number }) => {
+    list: (params?: { petId?: string; page?: number; limit?: number; category?: string; search?: string; startDate?: string; endDate?: string }) => {
       const searchParams = new URLSearchParams();
       if (params?.petId) searchParams.set('petId', params.petId);
       if (params?.page) searchParams.set('page', params.page.toString());
       if (params?.limit) searchParams.set('limit', params.limit.toString());
+      if (params?.category) searchParams.set('category', params.category);
+      if (params?.search) searchParams.set('search', params.search);
+      if (params?.startDate) searchParams.set('startDate', params.startDate);
+      if (params?.endDate) searchParams.set('endDate', params.endDate);
       return fetchApi(`/api/diaries?${searchParams}`);
     },
     get: (id: string) => fetchApi(`/api/diaries/${id}`),

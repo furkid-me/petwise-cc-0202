@@ -181,7 +181,7 @@ export function validatePartial<T>(
 ): { success: true; data: Partial<T> } | { success: false; error: string } {
   try {
     // Make all fields optional for partial validation
-    const partialSchema = schema.partial ? (schema as z.ZodObject<z.ZodRawShape>).partial() : schema;
+    const partialSchema = 'partial' in schema ? (schema as unknown as z.ZodObject<z.ZodRawShape>).partial() : schema;
     const result = partialSchema.parse(data);
     return { success: true, data: result as Partial<T> };
   } catch (error) {

@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // Analyze health
     const analysis = await analyzeHealth(
       petId,
-      diaries.map(d => ({
+      diaries.map((d: { category: string; content: string; details: unknown; occurredAt: Date }) => ({
         category: d.category,
         content: d.content,
         details: d.details as unknown,
