@@ -169,7 +169,7 @@ async function handleTextMessage(
           category: entry.category,
           subCategory: entry.subCategory,
           content: entry.content,
-          details: entry.details,
+          details: entry.details ? JSON.parse(JSON.stringify(entry.details)) : undefined,
           severity: entry.severity,
         },
       });
