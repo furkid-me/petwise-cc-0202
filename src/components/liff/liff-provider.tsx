@@ -35,6 +35,7 @@ interface LiffProviderProps {
 
 export function LiffProvider({ children }: LiffProviderProps) {
   const [isReady, setIsReady] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [lineProfile, setLineProfile] = useState<LiffContextType['lineProfile']>(null);
   const [error, setError] = useState<Error | null>(null);
 
@@ -50,7 +51,8 @@ export function LiffProvider({ children }: LiffProviderProps) {
 
         // Check if user is logged in
         if (!isLoggedIn()) {
-          // Redirect to LINE login
+          // Mark as redirecting and trigger login
+          setIsRedirecting(true);
           login();
           return;
         }
@@ -93,6 +95,37 @@ export function LiffProvider({ children }: LiffProviderProps) {
 
     init();
   }, [setUser, setPets, setLoading, setInitialized]);
+
+  // Show loading while redirecting to LINE login
+  if (isRedirecting) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="text-muted-foreground">正在跳轉到 LINE 登入...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h1 className="text-xl font-bold mb-2">初始化失敗</h1>
+          <p className="text-muted-foreground mb-4">{error.message}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+          >
+            重新載入
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!isReady) {
     return <PageLoading />;
