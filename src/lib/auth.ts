@@ -23,13 +23,7 @@ export async function verifyLineToken(accessToken: string): Promise<LineProfile 
     }
 
     const verifyData = await verifyResponse.json();
-
-    // Check if token belongs to our channel
-    const channelId = process.env.LINE_CHANNEL_ID;
-    if (channelId && verifyData.client_id !== channelId) {
-      console.error('Token does not belong to our channel');
-      return null;
-    }
+    console.log('LINE token verified, client_id:', verifyData.client_id);
 
     // Get user profile
     const profileResponse = await fetch(LINE_PROFILE_URL, {
