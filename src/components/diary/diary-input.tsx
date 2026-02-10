@@ -16,6 +16,7 @@ interface DiaryInputProps {
 export function DiaryInput({ onSuccess }: DiaryInputProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { draftInput, draftPhotos, setDraftInput, addDraftPhoto, removeDraftPhoto, clearDraft, addDiary } = useDiaryStore();
@@ -44,6 +45,7 @@ export function DiaryInput({ onSuccess }: DiaryInputProps) {
 
     setIsSubmitting(true);
     setIsParsing(true);
+    setError(null);
 
     try {
       // Create diary with AI parsing
@@ -64,9 +66,13 @@ export function DiaryInput({ onSuccess }: DiaryInputProps) {
 
         // Callback
         onSuccess?.();
+      } else {
+        // Show error message
+        setError(result.error || '記錄建立失敗，請稍後再試');
       }
-    } catch (error) {
-      console.error('Failed to create diary:', error);
+    } catch (err) {
+      console.error('Failed to create diary:', err);
+      setError('記錄建立失敗，請稍後再試');
     } finally {
       setIsSubmitting(false);
       setIsParsing(false);
@@ -191,6 +197,13 @@ export function DiaryInput({ onSuccess }: DiaryInputProps) {
           {isParsing ? 'AI 解析中...' : '送出'}
         </Button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mt-2 rounded-md bg-destructive/10 p-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       {/* Hint */}
       <p className="mt-2 text-xs text-muted-foreground">

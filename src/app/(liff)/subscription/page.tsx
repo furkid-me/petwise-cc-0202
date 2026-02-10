@@ -57,7 +57,7 @@ const plans: Plan[] = [
     features: [
       { text: '3 隻寵物', included: true },
       { text: '無限則記錄', included: true },
-      { text: '記錄保存 1 年', included: true },
+      { text: '記錄保存 90 天', included: true },
       { text: 'AI 智能分類', included: true },
       { text: '每則 5 張照片', included: true },
       { text: '無限提醒', included: true },
@@ -77,7 +77,7 @@ const plans: Plan[] = [
     features: [
       { text: '無限寵物', included: true },
       { text: '無限則記錄', included: true },
-      { text: '記錄永久保存', included: true },
+      { text: '記錄保存 365 天', included: true },
       { text: 'AI 智能分類', included: true },
       { text: '每則 10 張照片', included: true },
       { text: '無限 + 智能提醒', included: true },

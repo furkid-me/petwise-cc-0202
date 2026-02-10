@@ -54,15 +54,32 @@ export async function GET(request: NextRequest) {
     const totalCount = categoryStats.reduce((sum: number, stat: { _count: { id: number } }) => sum + stat._count.id, 0);
 
     // Get daily counts for trend
-    const dailyStats = await prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
-      SELECT DATE(occurred_at) as date, COUNT(*) as count
-      FROM diaries
-      WHERE user_id = ${user.id}
-        ${petId ? prisma.$queryRaw`AND pet_id = ${petId}` : prisma.$queryRaw``}
-        AND occurred_at >= ${startDate}
-      GROUP BY DATE(occurred_at)
-      ORDER BY date DESC
-    `;
+    let dailyStats: Array<{ date: Date; count: bigint }> = [];
+    try {
+      if (petId) {
+        dailyStats = await prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+          SELECT DATE(occurred_at) as date, COUNT(*) as count
+          FROM diaries
+          WHERE user_id = ${user.id}
+            AND pet_id = ${petId}
+            AND occurred_at >= ${startDate}
+          GROUP BY DATE(occurred_at)
+          ORDER BY date DESC
+        `;
+      } else {
+        dailyStats = await prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+          SELECT DATE(occurred_at) as date, COUNT(*) as count
+          FROM diaries
+          WHERE user_id = ${user.id}
+            AND occurred_at >= ${startDate}
+          GROUP BY DATE(occurred_at)
+          ORDER BY date DESC
+        `;
+      }
+    } catch (queryError) {
+      console.error('Daily stats query error:', queryError);
+      // Continue without daily stats if query fails
+    }
 
     // Get upcoming reminders
     const upcomingReminders = await prisma.reminder.findMany({
