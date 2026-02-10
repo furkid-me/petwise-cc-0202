@@ -25,6 +25,19 @@ interface LineWebhookBody {
   events: LineEvent[];
 }
 
+interface Pet {
+  id: string;
+  name: string;
+}
+
+interface UserWithPets {
+  id: string;
+  pets: Pet[];
+}
+
+// 暫存用戶的待處理訊息（用於 Quick Reply 選擇寵物後繼續處理）
+const pendingMessages = new Map<string, { text: string; parsedEntries: unknown[] }>();
+
 // Verify LINE signature
 function verifySignature(body: string, signature: string): boolean {
   const channelSecret = process.env.LINE_CHANNEL_SECRET;
@@ -69,39 +82,36 @@ async function handleEvent(event: LineEvent) {
   const { type, source } = event;
   const userId = source.userId;
 
-  // Get or create user
-  let user = await prisma.user.findUnique({
+  // Get or create user with ALL pets
+  const user = await prisma.user.findUnique({
     where: { lineUserId: userId },
-    include: { pets: { where: { isActive: true, isDefault: true } } },
+    include: { pets: { where: { isActive: true }, orderBy: { isDefault: 'desc' } } },
   });
 
   switch (type) {
     case 'follow':
-      // User added the bot
       await handleFollow(userId);
       break;
 
     case 'unfollow':
-      // User blocked the bot
       await handleUnfollow(userId);
       break;
 
     case 'message':
       if (event.message?.type === 'text' && event.message.text) {
-        await handleTextMessage(userId, event.message.text, event.replyToken, user);
+        await handleTextMessage(userId, event.message.text, user as UserWithPets | null);
       }
       break;
 
     case 'postback':
       if (event.postback?.data) {
-        await handlePostback(userId, event.postback.data, event.replyToken);
+        await handlePostback(userId, event.postback.data, user as UserWithPets | null);
       }
       break;
   }
 }
 
 async function handleFollow(lineUserId: string) {
-  // Create user if not exists
   const existingUser = await prisma.user.findUnique({
     where: { lineUserId },
   });
@@ -112,7 +122,6 @@ async function handleFollow(lineUserId: string) {
     });
   }
 
-  // Send welcome message
   await sendLineMessage(lineUserId, {
     type: 'text',
     text: '歡迎使用 PetWise 寵物日記！🐾\n\n直接傳訊息給我，我會幫你記錄毛小孩的生活點滴。\n\n例如：「今天麻糬吃了飼料，下午去公園跑步」\n\n或點擊下方選單開始使用完整功能！',
@@ -120,7 +129,6 @@ async function handleFollow(lineUserId: string) {
 }
 
 async function handleUnfollow(lineUserId: string) {
-  // Update user notify preference
   await prisma.user.updateMany({
     where: { lineUserId },
     data: { notifyEnabled: false },
@@ -130,13 +138,10 @@ async function handleUnfollow(lineUserId: string) {
 async function handleTextMessage(
   lineUserId: string,
   text: string,
-  replyToken?: string,
-  user?: unknown
+  user: UserWithPets | null
 ) {
-  const typedUser = user as { id: string; pets: { id: string; name: string }[] } | null;
-
-  // Check if user has pets
-  if (!typedUser || !typedUser.pets || typedUser.pets.length === 0) {
+  // 檢查用戶是否有寵物
+  if (!user || !user.pets || user.pets.length === 0) {
     await sendLineMessage(lineUserId, {
       type: 'text',
       text: '你還沒有新增寵物喔！\n\n請先點擊下方選單的「我的寵物」來新增你的毛小孩 🐕🐱',
@@ -144,11 +149,12 @@ async function handleTextMessage(
     return;
   }
 
-  const defaultPet = typedUser.pets[0];
-
-  // Parse the input with AI
   try {
-    const parsed = await parseDiaryInput(text);
+    // 取得所有寵物名字
+    const petNames = user.pets.map(p => p.name);
+
+    // 使用 AI 解析訊息，並傳入寵物名字列表
+    const parsed = await parseDiaryInput(text, undefined, petNames);
 
     if (parsed.entries.length === 0) {
       await sendLineMessage(lineUserId, {
@@ -158,61 +164,64 @@ async function handleTextMessage(
       return;
     }
 
-    // Create diary entries
-    const createdDiaries = [];
-    for (const entry of parsed.entries) {
-      const diary = await prisma.diary.create({
-        data: {
-          userId: typedUser.id,
-          petId: defaultPet.id,
-          rawInput: text,
-          category: entry.category,
-          subCategory: entry.subCategory,
-          content: entry.content,
-          details: entry.details ? JSON.parse(JSON.stringify(entry.details)) : undefined,
-          severity: entry.severity,
-        },
-      });
-      createdDiaries.push(diary);
+    // 嘗試找出訊息中提到的寵物
+    let targetPet: Pet | null = null;
+
+    if (parsed.mentionedPetName) {
+      // AI 辨識到寵物名字，嘗試匹配
+      const mentionedName = parsed.mentionedPetName.toLowerCase();
+      targetPet = user.pets.find(p =>
+        p.name.toLowerCase() === mentionedName ||
+        p.name.toLowerCase().includes(mentionedName) ||
+        mentionedName.includes(p.name.toLowerCase())
+      ) || null;
     }
 
-    // Build response message
-    const categoryEmojis: Record<string, string> = {
-      FOOD: '🍽️',
-      HEALTH: '❤️',
-      ACTIVITY: '🏃',
-      MEDICAL: '🏥',
-      GROOMING: '✨',
-      BEHAVIOR: '🐾',
-      OTHER: '📝',
-    };
+    if (!targetPet) {
+      // 沒有從訊息中識別到寵物
+      if (user.pets.length === 1) {
+        // 只有一隻寵物，直接使用
+        targetPet = user.pets[0];
+      } else {
+        // 多隻寵物，發送 Quick Reply 讓用戶選擇
+        pendingMessages.set(lineUserId, {
+          text,
+          parsedEntries: parsed.entries,
+        });
 
-    const categoryNames: Record<string, string> = {
-      FOOD: '飲食',
-      HEALTH: '健康',
-      ACTIVITY: '活動',
-      MEDICAL: '醫療',
-      GROOMING: '美容',
-      BEHAVIOR: '行為',
-      OTHER: '其他',
-    };
-
-    let responseText = `已幫 ${defaultPet.name} 記錄：\n\n`;
-    for (const entry of parsed.entries) {
-      const emoji = categoryEmojis[entry.category] || '📝';
-      const name = categoryNames[entry.category] || '其他';
-      responseText += `${emoji} ${name}：${entry.content}\n`;
+        await sendLineMessage(lineUserId, {
+          type: 'text',
+          text: '要記錄給哪隻寵物？',
+          quickReply: {
+            items: [
+              ...user.pets.slice(0, 10).map(pet => ({
+                type: 'action' as const,
+                action: {
+                  type: 'postback' as const,
+                  label: pet.name.slice(0, 20),
+                  data: `action=select_pet&petId=${pet.id}`,
+                  displayText: pet.name,
+                },
+              })),
+              {
+                type: 'action' as const,
+                action: {
+                  type: 'postback' as const,
+                  label: '取消',
+                  data: 'action=cancel_diary',
+                  displayText: '取消',
+                },
+              },
+            ],
+          },
+        });
+        return;
+      }
     }
 
-    // Add health warning if needed
-    if (parsed.healthWarning) {
-      responseText += `\n⚠️ ${parsed.healthWarning}`;
-    }
+    // 有確定的寵物，建立日記
+    await createDiaryAndReply(lineUserId, user.id, targetPet, text, parsed.entries, parsed.healthWarning);
 
-    await sendLineMessage(lineUserId, {
-      type: 'text',
-      text: responseText,
-    });
   } catch (error) {
     console.error('Failed to parse diary input:', error);
     await sendLineMessage(lineUserId, {
@@ -222,16 +231,193 @@ async function handleTextMessage(
   }
 }
 
+async function createDiaryAndReply(
+  lineUserId: string,
+  userId: string,
+  pet: Pet,
+  rawInput: string,
+  entries: unknown[],
+  healthWarning?: string
+) {
+  const typedEntries = entries as Array<{
+    category: string;
+    subCategory?: string;
+    content: string;
+    details?: Record<string, unknown>;
+    severity?: number;
+  }>;
+
+  // 建立日記記錄
+  for (const entry of typedEntries) {
+    await prisma.diary.create({
+      data: {
+        userId,
+        petId: pet.id,
+        rawInput,
+        category: entry.category as 'FOOD' | 'HEALTH' | 'ACTIVITY' | 'MEDICAL' | 'GROOMING' | 'BEHAVIOR' | 'OTHER',
+        subCategory: entry.subCategory,
+        content: entry.content,
+        details: entry.details ? JSON.parse(JSON.stringify(entry.details)) : undefined,
+        severity: entry.severity,
+      },
+    });
+  }
+
+  // 組裝回覆訊息
+  const categoryEmojis: Record<string, string> = {
+    FOOD: '🍽️',
+    HEALTH: '❤️',
+    ACTIVITY: '🏃',
+    MEDICAL: '🏥',
+    GROOMING: '✨',
+    BEHAVIOR: '🐾',
+    OTHER: '📝',
+  };
+
+  const categoryNames: Record<string, string> = {
+    FOOD: '飲食',
+    HEALTH: '健康',
+    ACTIVITY: '活動',
+    MEDICAL: '醫療',
+    GROOMING: '美容',
+    BEHAVIOR: '行為',
+    OTHER: '其他',
+  };
+
+  let responseText = `✅ 已為【${pet.name}】記錄：\n\n`;
+  for (const entry of typedEntries) {
+    const emoji = categoryEmojis[entry.category] || '📝';
+    const name = categoryNames[entry.category] || '其他';
+    responseText += `${emoji} ${name}：${entry.content}\n`;
+  }
+
+  if (healthWarning) {
+    responseText += `\n⚠️ ${healthWarning}`;
+  }
+
+  // 發送確認訊息，附帶修改和刪除按鈕
+  await sendLineMessage(lineUserId, {
+    type: 'text',
+    text: responseText,
+    quickReply: {
+      items: [
+        {
+          type: 'action',
+          action: {
+            type: 'postback',
+            label: '📝 修改寵物',
+            data: `action=change_pet&rawInput=${encodeURIComponent(rawInput)}&entries=${encodeURIComponent(JSON.stringify(typedEntries))}`,
+            displayText: '修改寵物',
+          },
+        },
+      ],
+    },
+  });
+}
+
 async function handlePostback(
   lineUserId: string,
   data: string,
-  replyToken?: string
+  user: UserWithPets | null
 ) {
   const params = new URLSearchParams(data);
   const action = params.get('action');
 
   switch (action) {
-    case 'complete_reminder':
+    case 'select_pet': {
+      // 用戶選擇了寵物
+      const petId = params.get('petId');
+      const pending = pendingMessages.get(lineUserId);
+
+      if (!petId || !pending || !user) {
+        await sendLineMessage(lineUserId, {
+          type: 'text',
+          text: '操作已過期，請重新輸入 😅',
+        });
+        pendingMessages.delete(lineUserId);
+        return;
+      }
+
+      const pet = user.pets.find(p => p.id === petId);
+      if (!pet) {
+        await sendLineMessage(lineUserId, {
+          type: 'text',
+          text: '找不到這隻寵物，請重新輸入 😅',
+        });
+        pendingMessages.delete(lineUserId);
+        return;
+      }
+
+      // 建立日記
+      await createDiaryAndReply(
+        lineUserId,
+        user.id,
+        pet,
+        pending.text,
+        pending.parsedEntries
+      );
+
+      pendingMessages.delete(lineUserId);
+      break;
+    }
+
+    case 'cancel_diary': {
+      pendingMessages.delete(lineUserId);
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: '已取消 👌',
+      });
+      break;
+    }
+
+    case 'change_pet': {
+      // 用戶想要修改寵物
+      if (!user || user.pets.length === 0) {
+        await sendLineMessage(lineUserId, {
+          type: 'text',
+          text: '你沒有其他寵物可以選擇 😅',
+        });
+        return;
+      }
+
+      const rawInput = params.get('rawInput') || '';
+      const entriesStr = params.get('entries') || '[]';
+
+      pendingMessages.set(lineUserId, {
+        text: decodeURIComponent(rawInput),
+        parsedEntries: JSON.parse(decodeURIComponent(entriesStr)),
+      });
+
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: '要改記錄給哪隻寵物？',
+        quickReply: {
+          items: [
+            ...user.pets.slice(0, 10).map(pet => ({
+              type: 'action' as const,
+              action: {
+                type: 'postback' as const,
+                label: pet.name.slice(0, 20),
+                data: `action=select_pet&petId=${pet.id}`,
+                displayText: pet.name,
+              },
+            })),
+            {
+              type: 'action' as const,
+              action: {
+                type: 'postback' as const,
+                label: '取消',
+                data: 'action=cancel_diary',
+                displayText: '取消',
+              },
+            },
+          ],
+        },
+      });
+      break;
+    }
+
+    case 'complete_reminder': {
       const reminderId = params.get('id');
       if (reminderId) {
         await prisma.reminder.update({
@@ -247,8 +433,9 @@ async function handlePostback(
         });
       }
       break;
+    }
 
-    case 'snooze_reminder':
+    case 'snooze_reminder': {
       const snoozeId = params.get('id');
       const minutes = parseInt(params.get('minutes') || '30');
       if (snoozeId) {
@@ -270,6 +457,7 @@ async function handlePostback(
         }
       }
       break;
+    }
   }
 }
 

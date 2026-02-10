@@ -23,6 +23,7 @@ export interface ParseResult {
   entries: ParsedDiaryEntry[];
   summary: string;
   healthWarning?: string;
+  mentionedPetName?: string; // 訊息中提到的寵物名字
 }
 
 const SYSTEM_PROMPT = `你是一個寵物日記助手，專門解析飼主對寵物的口語化描述。
@@ -31,6 +32,7 @@ const SYSTEM_PROMPT = `你是一個寵物日記助手，專門解析飼主對寵
 1. 將用戶的口語化輸入解析成結構化的日記記錄
 2. 一個輸入可能包含多個記錄（例如飲食+運動）
 3. 為每個記錄分類並提取詳細資訊
+4. 從訊息中辨識寵物名字（如果有提到的話）
 
 分類說明：
 - FOOD: 飲食相關（吃東西、喝水、零食、保健品）
@@ -58,19 +60,31 @@ const SYSTEM_PROMPT = `你是一個寵物日記助手，專門解析飼主對寵
       "tags": ["正常飲食"]
     }
   ],
-  "summary": "今天飲食正常，運動量充足"
+  "summary": "今天飲食正常，運動量充足",
+  "mentionedPetName": "小白"
 }
 
 注意事項：
 - mood/severity 使用 1-5 分制（1=很差, 5=很好）
 - 如果提到需要提醒的事項（如下次疫苗），提供 reminderSuggestion
 - 保持原文的重要細節，不要過度簡化
-- 如果無法判斷分類，使用 OTHER`;
+- 如果無法判斷分類，使用 OTHER
+- mentionedPetName: 如果訊息中有提到寵物名字（如「小白今天...」、「咪咪吃了...」），請提取該名字；如果沒有提到則不要包含此欄位`;
 
-export async function parseDiaryInput(input: string, petName?: string): Promise<ParseResult> {
-  const userMessage = petName
-    ? `寵物名字：${petName}\n\n飼主描述：${input}`
-    : `飼主描述：${input}`;
+export async function parseDiaryInput(
+  input: string,
+  petName?: string,
+  allPetNames?: string[]
+): Promise<ParseResult> {
+  let userMessage = `飼主描述：${input}`;
+
+  if (petName) {
+    userMessage = `寵物名字：${petName}\n\n${userMessage}`;
+  }
+
+  if (allPetNames && allPetNames.length > 0) {
+    userMessage = `用戶的寵物列表：${allPetNames.join('、')}\n\n${userMessage}`;
+  }
 
   try {
     const response = await openai.chat.completions.create({

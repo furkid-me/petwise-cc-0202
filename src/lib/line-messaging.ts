@@ -3,15 +3,33 @@
  * 用於發送推播通知和訊息
  */
 
+interface QuickReplyItem {
+  type: 'action';
+  action: {
+    type: 'postback' | 'message' | 'uri';
+    label: string;
+    data?: string;
+    displayText?: string;
+    text?: string;
+    uri?: string;
+  };
+}
+
+interface QuickReply {
+  items: QuickReplyItem[];
+}
+
 interface TextMessage {
   type: 'text';
   text: string;
+  quickReply?: QuickReply;
 }
 
 interface FlexMessage {
   type: 'flex';
   altText: string;
   contents: FlexContainer;
+  quickReply?: QuickReply;
 }
 
 interface FlexContainer {
