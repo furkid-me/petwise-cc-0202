@@ -60,7 +60,7 @@ export default function StatsPage() {
       }
 
       setIsLoading(true);
-      const result = await api.stats.overview(currentPet.id);
+      const result = await api.stats.overview(currentPet.id, maxDays);
       if (result.success && result.data) {
         setStats(result.data as StatsData);
       }
@@ -68,7 +68,7 @@ export default function StatsPage() {
     };
 
     fetchStats();
-  }, [currentPet]);
+  }, [currentPet, maxDays]);
 
   if (isLoading) {
     return <ContentLoading />;

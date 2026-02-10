@@ -88,6 +88,8 @@ export const useUserStore = create<UserState>()(
     {
       name: 'petwise-user-store',
       partialize: (state) => ({
+        user: state.user,
+        pets: state.pets,
         currentPetId: state.currentPetId,
       }),
     }

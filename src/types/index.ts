@@ -198,7 +198,7 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionPlan, SubscriptionLimits> =
     maxDailyEntries: -1, // unlimited
     maxPhotosPerEntry: 5,
     maxReminders: -1,
-    retentionDays: 365,
+    retentionDays: 90,
     hasAiAnalysis: false,
     hasExport: true,
     hasFamilyShare: false,
@@ -208,7 +208,7 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionPlan, SubscriptionLimits> =
     maxDailyEntries: -1,
     maxPhotosPerEntry: 10,
     maxReminders: -1,
-    retentionDays: -1, // forever
+    retentionDays: 365,
     hasAiAnalysis: true,
     hasExport: true,
     hasFamilyShare: true,

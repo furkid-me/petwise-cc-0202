@@ -89,10 +89,17 @@ export function LiffProvider({ children }: LiffProviderProps) {
             const { user } = authResult.data as { user: User };
             setUser(user);
 
-            // Fetch user's pets
-            const petsResult = await api.pets.list();
+            // Fetch user's pets - retry once if failed
+            let petsResult = await api.pets.list();
+            if (!petsResult.success) {
+              console.log('First pets fetch failed, retrying...');
+              await new Promise(resolve => setTimeout(resolve, 500));
+              petsResult = await api.pets.list();
+            }
             if (petsResult.success && petsResult.data) {
               setPets(petsResult.data as Pet[]);
+            } else {
+              console.error('Failed to fetch pets:', petsResult.error);
             }
           }
         }

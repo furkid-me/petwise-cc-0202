@@ -15,13 +15,16 @@ export async function GET(request: NextRequest) {
     const days = parseInt(searchParams.get('days') || '7');
 
     // Determine date range based on subscription
+    // FREE: 最多 7 天統計, STANDARD: 最多 90 天, PREMIUM: 最多 365 天
     let allowedDays = days;
     if (user.subscriptionPlan === 'FREE') {
       allowedDays = Math.min(days, 7);
     } else if (user.subscriptionPlan === 'STANDARD') {
       allowedDays = Math.min(days, 90);
+    } else {
+      // PREMIUM: 365 days limit
+      allowedDays = Math.min(days, 365);
     }
-    // PREMIUM has no limit
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - allowedDays);

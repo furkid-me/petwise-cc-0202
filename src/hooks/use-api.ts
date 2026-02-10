@@ -167,9 +167,12 @@ export const api = {
 
   // Stats
   stats: {
-    overview: (petId?: string) => {
-      const params = petId ? `?petId=${petId}` : '';
-      return fetchApi(`/api/stats/overview${params}`);
+    overview: (petId?: string, days?: number) => {
+      const searchParams = new URLSearchParams();
+      if (petId) searchParams.set('petId', petId);
+      if (days) searchParams.set('days', days.toString());
+      const params = searchParams.toString();
+      return fetchApi(`/api/stats/overview${params ? `?${params}` : ''}`);
     },
   },
 
