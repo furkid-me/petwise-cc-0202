@@ -76,6 +76,12 @@ export async function parseDiaryInput(
   petName?: string,
   allPetNames?: string[]
 ): Promise<ParseResult> {
+  // 如果沒有 OpenAI API key，直接使用 fallback
+  if (!process.env.OPENAI_API_KEY) {
+    console.log('No OpenAI API key, using fallback parser');
+    return createFallbackResult(input);
+  }
+
   let userMessage = `飼主描述：${input}`;
 
   if (petName) {
@@ -107,19 +113,40 @@ export async function parseDiaryInput(
     return result;
   } catch (error) {
     console.error('AI parsing error:', error);
-
-    // Fallback: 建立一個基本的 OTHER 分類記錄
-    return {
-      entries: [
-        {
-          category: 'OTHER',
-          content: input,
-          details: {},
-        },
-      ],
-      summary: input,
-    };
+    return createFallbackResult(input);
   }
+}
+
+// 簡單的關鍵字分類 fallback
+function createFallbackResult(input: string): ParseResult {
+  const lowerInput = input.toLowerCase();
+  let category: ParsedDiaryEntry['category'] = 'OTHER';
+
+  // 簡單關鍵字匹配
+  if (/吃|喝|飼料|罐頭|零食|食|餐|飯/.test(input)) {
+    category = 'FOOD';
+  } else if (/散步|走|跑|玩|運動|睡|遊/.test(input)) {
+    category = 'ACTIVITY';
+  } else if (/醫|診|疫苗|藥|打針|驅蟲/.test(input)) {
+    category = 'MEDICAL';
+  } else if (/洗澡|洗|剪|梳|毛|美容/.test(input)) {
+    category = 'GROOMING';
+  } else if (/便|尿|吐|拉|嘔|體重|精神/.test(input)) {
+    category = 'HEALTH';
+  } else if (/叫|咬|行為|情緒|脾氣/.test(input)) {
+    category = 'BEHAVIOR';
+  }
+
+  return {
+    entries: [
+      {
+        category,
+        content: input,
+        details: {},
+      },
+    ],
+    summary: input,
+  };
 }
 
 // 健康分析（付費功能）
