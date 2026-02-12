@@ -326,13 +326,13 @@ async function createDiaryAndReply(
   }
 
   // 使用 Flex Message 發送確認訊息
-  const entries = typedEntries.map((entry) => ({
+  const flexEntries = typedEntries.map((entry) => ({
     category: entry.category,
     content: entry.content,
   }));
 
-  console.log(`[LINE] Sending flex message for ${entries.length} entries`);
-  const flexMessage = buildDiaryConfirmMessage(pet.name, entries, {
+  console.log(`[LINE] Sending flex message for ${flexEntries.length} entries`);
+  const flexMessage = buildDiaryConfirmMessage(pet.name, flexEntries, {
     weightUpdated,
     newWeight: extractedWeight,
     healthWarning,
