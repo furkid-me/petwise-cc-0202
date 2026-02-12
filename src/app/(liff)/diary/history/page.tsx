@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Search, Filter, Calendar, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,15 +47,26 @@ const categories: { value: DiaryCategory | 'ALL'; label: string }[] = [
 ];
 
 export default function DiaryHistoryPage() {
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get('date');
+
   const currentPet = useCurrentPet();
   const { diaries, setDiaries, isLoading, setLoading, hasMore, setHasMore, page, setPage } =
     useDiaryStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<DiaryCategory | 'ALL'>('ALL');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(dateParam || '');
+  const [endDate, setEndDate] = useState(dateParam || '');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // 當 URL 參數變化時更新日期篩選
+  useEffect(() => {
+    if (dateParam) {
+      setStartDate(dateParam);
+      setEndDate(dateParam);
+    }
+  }, [dateParam]);
 
   const fetchDiaries = useCallback(
     async (reset = false) => {

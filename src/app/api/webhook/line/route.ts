@@ -267,16 +267,26 @@ async function createDiaryAndReply(
     severity?: number;
   }>;
 
-  // 如果有提取到體重，自動更新寵物資料
+  // 如果有提取到體重，自動更新寵物資料並建立體重記錄
   let weightUpdated = false;
   if (extractedWeight !== undefined && extractedWeight > 0) {
     try {
+      // 更新寵物體重
       await prisma.pet.update({
         where: { id: pet.id },
         data: { weight: extractedWeight },
       });
+
+      // 建立體重記錄（用於趨勢圖）
+      await prisma.weightRecord.create({
+        data: {
+          petId: pet.id,
+          weight: extractedWeight,
+        },
+      });
+
       weightUpdated = true;
-      console.log(`[LINE] Updated pet weight: ${extractedWeight}`);
+      console.log(`[LINE] Updated pet weight and created weight record: ${extractedWeight}`);
     } catch (e) {
       console.error('[LINE] Failed to update pet weight:', e);
     }

@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, Calendar, Bell, AlertTriangle, Scale } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { BarChart3, TrendingUp, Calendar, Bell, AlertTriangle, Scale, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ContentLoading } from '@/components/ui/loading';
 import { PetSelector } from '@/components/liff/pet-selector';
 import { useCurrentPet, useSubscriptionPlan } from '@/stores/user-store';
@@ -124,7 +126,15 @@ function WeightChart({ data }: { data: { date: string; weight: number }[] }) {
 }
 
 // 健康日曆組件
-function HealthCalendar({ data, days }: { data: { date: string; count: number }[]; days: number }) {
+function HealthCalendar({
+  data,
+  days,
+  onDateClick,
+}: {
+  data: { date: string; count: number }[];
+  days: number;
+  onDateClick?: (date: string) => void;
+}) {
   // 生成最近 N 天的日期
   const today = new Date();
   const calendarDays = Array.from({ length: Math.min(days, 30) }, (_, i) => {
@@ -153,51 +163,69 @@ function HealthCalendar({ data, days }: { data: { date: string; count: number }[
           const isToday = dateStr === today.toISOString().split('T')[0];
 
           return (
-            <div
+            <button
               key={dateStr}
-              className={`aspect-square rounded text-center text-xs flex items-center justify-center
-                ${count > 0 ? 'bg-primary/20 text-primary font-medium' : 'bg-muted/50'}
+              onClick={() => count > 0 && onDateClick?.(dateStr)}
+              className={`aspect-square rounded text-center text-xs flex items-center justify-center transition-all
+                ${count > 0 ? 'bg-primary/20 text-primary font-medium cursor-pointer hover:bg-primary/40' : 'bg-muted/50 cursor-default'}
                 ${isToday ? 'ring-2 ring-primary' : ''}
               `}
               title={`${dateStr}: ${count} 則記錄`}
+              disabled={count === 0}
             >
               {date.getDate()}
-            </div>
+            </button>
           );
         })}
       </div>
       <p className="text-xs text-center text-muted-foreground">
-        有記錄的日子會以色塊標示
+        點擊有記錄的日子可查看詳情
       </p>
     </div>
   );
 }
 
 export default function StatsPage() {
+  const router = useRouter();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const currentPet = useCurrentPet();
+  const currentPetId = currentPet?.id;
   const subscriptionPlan = useSubscriptionPlan();
 
   const maxDays = subscriptionPlan === 'FREE' ? 7 : subscriptionPlan === 'STANDARD' ? 90 : 365;
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!currentPet) {
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      const result = await api.stats.overview(currentPet.id, maxDays);
-      if (result.success && result.data) {
-        setStats(result.data as StatsData);
-      }
+  const fetchStats = async (showRefreshing = false) => {
+    if (!currentPetId) {
       setIsLoading(false);
-    };
+      return;
+    }
 
+    if (showRefreshing) setIsRefreshing(true);
+    else setIsLoading(true);
+
+    const result = await api.stats.overview(currentPetId, maxDays);
+    if (result.success && result.data) {
+      setStats(result.data as StatsData);
+    }
+
+    setIsLoading(false);
+    setIsRefreshing(false);
+  };
+
+  useEffect(() => {
     fetchStats();
-  }, [currentPet, maxDays]);
+  }, [currentPetId, maxDays]);
+
+  const handleRefresh = () => {
+    fetchStats(true);
+  };
+
+  const handleDateClick = (dateStr: string) => {
+    // 導航到日記歷史頁面，並帶上日期參數
+    router.push(`/diary/history?date=${dateStr}`);
+  };
 
   if (isLoading) {
     return <ContentLoading />;
@@ -216,7 +244,17 @@ export default function StatsPage() {
     <div className="mx-auto max-w-lg p-4">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-bold">統計報告</h1>
-        <PetSelector />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <PetSelector />
+        </div>
       </div>
 
       {stats && (
@@ -301,6 +339,7 @@ export default function StatsPage() {
               <HealthCalendar
                 data={stats.calendarData || []}
                 days={stats.period.days}
+                onDateClick={handleDateClick}
               />
             </CardContent>
           </Card>
