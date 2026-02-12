@@ -125,6 +125,14 @@ function WeightChart({ data }: { data: { date: string; weight: number }[] }) {
   );
 }
 
+// 取得本地日期字串 (YYYY-MM-DD)
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // 健康日曆組件
 function HealthCalendar({
   data,
@@ -135,16 +143,20 @@ function HealthCalendar({
   days: number;
   onDateClick?: (date: string) => void;
 }) {
-  // 生成最近 N 天的日期
+  // 生成最近 N 天的日期（使用本地時區）
   const today = new Date();
+  const todayStr = getLocalDateString(today);
   const calendarDays = Array.from({ length: Math.min(days, 30) }, (_, i) => {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    return date.toISOString().split('T')[0];
+    return getLocalDateString(date);
   }).reverse();
 
   const dataMap = new Map(
-    data.map((d) => [new Date(d.date).toISOString().split('T')[0], d.count])
+    data.map((d) => {
+      const dateObj = new Date(d.date);
+      return [getLocalDateString(dateObj), d.count];
+    })
   );
 
   return (
@@ -159,8 +171,8 @@ function HealthCalendar({
       <div className="grid grid-cols-7 gap-1">
         {calendarDays.map((dateStr) => {
           const count = dataMap.get(dateStr) || 0;
-          const date = new Date(dateStr);
-          const isToday = dateStr === today.toISOString().split('T')[0];
+          const date = new Date(dateStr + 'T00:00:00');
+          const isToday = dateStr === todayStr;
 
           return (
             <button
