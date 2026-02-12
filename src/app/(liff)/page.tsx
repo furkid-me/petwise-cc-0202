@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Calendar } from 'lucide-react';
+import { Plus, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DiaryCard } from '@/components/diary/diary-card';
@@ -13,33 +13,50 @@ import { useUserStore, useCurrentPet } from '@/stores/user-store';
 import { useDiaryStore, useTodayDiaries } from '@/stores/diary-store';
 import { api } from '@/hooks/use-api';
 import { formatDate, getSpeciesEmoji, getPetAge } from '@/lib/utils';
-import type { Diary } from '@/types';
+import type { Diary, Pet } from '@/types';
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const user = useUserStore((state) => state.user);
   const pets = useUserStore((state) => state.pets);
+  const setPets = useUserStore((state) => state.setPets);
   const currentPet = useCurrentPet();
   const { setDiaries } = useDiaryStore();
   const todayDiaries = useTodayDiaries();
 
-  useEffect(() => {
-    const fetchDiaries = async () => {
-      if (!currentPet) {
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      const result = await api.diaries.list({ petId: currentPet.id, limit: 20 });
-      if (result.success && result.data) {
-        setDiaries(result.data as Diary[]);
-      }
+  const fetchData = useCallback(async (showRefreshing = false) => {
+    if (!currentPet) {
       setIsLoading(false);
-    };
+      return;
+    }
 
-    fetchDiaries();
-  }, [currentPet, setDiaries]);
+    if (showRefreshing) setIsRefreshing(true);
+    else setIsLoading(true);
+
+    // Fetch fresh pets data
+    const petsResult = await api.pets.list();
+    if (petsResult.success && petsResult.data) {
+      setPets(petsResult.data as Pet[]);
+    }
+
+    // Fetch diaries
+    const result = await api.diaries.list({ petId: currentPet.id, limit: 20 });
+    if (result.success && result.data) {
+      setDiaries(result.data as Diary[]);
+    }
+
+    setIsLoading(false);
+    setIsRefreshing(false);
+  }, [currentPet, setDiaries, setPets]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleRefresh = () => {
+    fetchData(true);
+  };
 
   // No pets - show onboarding
   if (pets.length === 0) {
@@ -90,13 +107,27 @@ export default function HomePage() {
                 getSpeciesEmoji(currentPet.species)
               )}
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-lg font-semibold">{currentPet.name}</h2>
               <p className="text-sm text-muted-foreground">
                 {currentPet.breed || '未設定品種'}
                 {currentPet.birthday && ` · ${getPetAge(currentPet.birthday)}`}
               </p>
+              {currentPet.weight && (
+                <p className="text-sm text-primary font-medium">
+                  體重：{currentPet.weight} kg
+                </p>
+              )}
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="shrink-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
           </CardContent>
         </Card>
       )}
