@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 // POST /api/redeem - 兌換碼使用
 export async function POST(request: NextRequest) {
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     periodEnd.setDate(periodEnd.getDate() + redemptionCode.durationDays);
 
     // 執行兌換（使用 transaction）
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 更新兌換碼使用次數
       await tx.redemptionCode.update({
         where: { id: redemptionCode.id },

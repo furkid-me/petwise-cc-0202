@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, Calendar, Bell } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Bell, AlertTriangle, Scale } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ContentLoading } from '@/components/ui/loading';
@@ -27,6 +27,19 @@ interface StatsData {
     date: string;
     count: number;
   }[];
+  calendarData: {
+    date: string;
+    count: number;
+  }[];
+  weightHistory: {
+    date: string;
+    weight: number;
+  }[];
+  healthAlerts: {
+    type: string;
+    count: number;
+    lastOccurred: string | null;
+  }[];
   upcomingReminders: {
     id: string;
     title: string;
@@ -42,6 +55,122 @@ interface StatsData {
     weightTrend: 'up' | 'down' | 'stable';
     lastVetVisit: string | null;
   };
+}
+
+// 簡單的體重趨勢圖組件
+function WeightChart({ data }: { data: { date: string; weight: number }[] }) {
+  if (data.length === 0) {
+    return (
+      <p className="py-4 text-center text-muted-foreground">
+        尚無體重記錄
+      </p>
+    );
+  }
+
+  const weights = data.map((d) => d.weight);
+  const minWeight = Math.min(...weights);
+  const maxWeight = Math.max(...weights);
+  const range = maxWeight - minWeight || 1;
+
+  return (
+    <div className="space-y-2">
+      {/* 圖表 */}
+      <div className="relative h-32">
+        <svg className="h-full w-full" viewBox="0 0 100 50" preserveAspectRatio="none">
+          {/* 網格線 */}
+          <line x1="0" y1="25" x2="100" y2="25" stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="2" />
+
+          {/* 折線 */}
+          <polyline
+            fill="none"
+            stroke="hsl(var(--primary))"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            points={data
+              .map((d, i) => {
+                const x = (i / (data.length - 1 || 1)) * 100;
+                const y = 50 - ((d.weight - minWeight) / range) * 40 - 5;
+                return `${x},${y}`;
+              })
+              .join(' ')}
+          />
+
+          {/* 數據點 */}
+          {data.map((d, i) => {
+            const x = (i / (data.length - 1 || 1)) * 100;
+            const y = 50 - ((d.weight - minWeight) / range) * 40 - 5;
+            return (
+              <circle
+                key={i}
+                cx={x}
+                cy={y}
+                r="2"
+                fill="hsl(var(--primary))"
+              />
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* 數據摘要 */}
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>{formatDate(data[0].date, 'date')}</span>
+        <span>最新：{data[data.length - 1].weight} kg</span>
+        <span>{formatDate(data[data.length - 1].date, 'date')}</span>
+      </div>
+    </div>
+  );
+}
+
+// 健康日曆組件
+function HealthCalendar({ data, days }: { data: { date: string; count: number }[]; days: number }) {
+  // 生成最近 N 天的日期
+  const today = new Date();
+  const calendarDays = Array.from({ length: Math.min(days, 30) }, (_, i) => {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    return date.toISOString().split('T')[0];
+  }).reverse();
+
+  const dataMap = new Map(
+    data.map((d) => [new Date(d.date).toISOString().split('T')[0], d.count])
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-7 gap-1">
+        {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+          <div key={day} className="text-center text-xs text-muted-foreground">
+            {day}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {calendarDays.map((dateStr) => {
+          const count = dataMap.get(dateStr) || 0;
+          const date = new Date(dateStr);
+          const isToday = dateStr === today.toISOString().split('T')[0];
+
+          return (
+            <div
+              key={dateStr}
+              className={`aspect-square rounded text-center text-xs flex items-center justify-center
+                ${count > 0 ? 'bg-primary/20 text-primary font-medium' : 'bg-muted/50'}
+                ${isToday ? 'ring-2 ring-primary' : ''}
+              `}
+              title={`${dateStr}: ${count} 則記錄`}
+            >
+              {date.getDate()}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-xs text-center text-muted-foreground">
+        有記錄的日子會以色塊標示
+      </p>
+    </div>
+  );
 }
 
 export default function StatsPage() {
@@ -110,6 +239,69 @@ export default function StatsPage() {
                 </p>
                 <p className="text-sm text-muted-foreground">則記錄</p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Health Alerts */}
+          {stats.healthAlerts && stats.healthAlerts.length > 0 && (
+            <Card className="border-orange-200 bg-orange-50/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base text-orange-700">
+                  <AlertTriangle className="h-4 w-4" />
+                  健康異常提醒
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {stats.healthAlerts.map((alert, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between rounded-lg bg-white p-3"
+                    >
+                      <div>
+                        <p className="font-medium text-orange-800">{alert.type}</p>
+                        <p className="text-sm text-orange-600">
+                          最近 {stats.period.days} 天內出現 {alert.count} 次
+                        </p>
+                      </div>
+                      {alert.lastOccurred && (
+                        <Badge variant="outline" className="bg-white">
+                          最近：{formatDate(alert.lastOccurred, 'date')}
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Weight Trend */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Scale className="h-4 w-4" />
+                體重趨勢
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WeightChart data={stats.weightHistory || []} />
+            </CardContent>
+          </Card>
+
+          {/* Health Calendar */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Calendar className="h-4 w-4" />
+                記錄日曆
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <HealthCalendar
+                data={stats.calendarData || []}
+                days={stats.period.days}
+              />
             </CardContent>
           </Card>
 

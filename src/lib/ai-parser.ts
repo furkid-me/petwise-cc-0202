@@ -24,6 +24,7 @@ export interface ParseResult {
   summary: string;
   healthWarning?: string;
   mentionedPetName?: string; // 訊息中提到的寵物名字
+  extractedWeight?: number; // 如果提到體重，提取體重值（公斤）
 }
 
 const SYSTEM_PROMPT = `你是一個寵物日記助手，專門解析飼主對寵物的口語化描述。
@@ -61,7 +62,8 @@ const SYSTEM_PROMPT = `你是一個寵物日記助手，專門解析飼主對寵
     }
   ],
   "summary": "今天飲食正常，運動量充足",
-  "mentionedPetName": "小白"
+  "mentionedPetName": "小白",
+  "extractedWeight": 5.2
 }
 
 注意事項：
@@ -69,7 +71,8 @@ const SYSTEM_PROMPT = `你是一個寵物日記助手，專門解析飼主對寵
 - 如果提到需要提醒的事項（如下次疫苗），提供 reminderSuggestion
 - 保持原文的重要細節，不要過度簡化
 - 如果無法判斷分類，使用 OTHER
-- mentionedPetName: 如果訊息中有提到寵物名字（如「小白今天...」、「咪咪吃了...」），請提取該名字；如果沒有提到則不要包含此欄位`;
+- mentionedPetName: 如果訊息中有提到寵物名字（如「小白今天...」、「咪咪吃了...」），請提取該名字；如果沒有提到則不要包含此欄位
+- extractedWeight: 如果訊息中有提到體重數字（如「體重5.2公斤」、「量了體重是4.8kg」、「現在3公斤」），請提取體重數字（轉換為公斤）；如果沒有提到體重則不要包含此欄位`;
 
 export async function parseDiaryInput(
   input: string,
@@ -137,7 +140,20 @@ function createFallbackResult(input: string): ParseResult {
     category = 'BEHAVIOR';
   }
 
-  return {
+  // 嘗試提取體重
+  let extractedWeight: number | undefined;
+  // 匹配體重數字：支援「體重5.2公斤」、「5.2kg」、「5.2公斤」、「體重是5.2」等格式
+  const weightMatch = input.match(/(?:體重[是為]?)?(\d+(?:\.\d+)?)\s*(?:公斤|kg|KG|千克)/i) ||
+                      input.match(/體重[是為]?\s*(\d+(?:\.\d+)?)/);
+  if (weightMatch) {
+    extractedWeight = parseFloat(weightMatch[1]);
+    // 合理性檢查：體重應該在 0.1-200 公斤之間
+    if (extractedWeight < 0.1 || extractedWeight > 200) {
+      extractedWeight = undefined;
+    }
+  }
+
+  const result: ParseResult = {
     entries: [
       {
         category,
@@ -147,6 +163,12 @@ function createFallbackResult(input: string): ParseResult {
     ],
     summary: input,
   };
+
+  if (extractedWeight !== undefined) {
+    result.extractedWeight = extractedWeight;
+  }
+
+  return result;
 }
 
 // 健康分析（付費功能）

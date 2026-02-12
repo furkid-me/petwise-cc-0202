@@ -107,6 +107,9 @@ export async function GET(request: NextRequest) {
 
     // Get pet summary if petId provided
     let petSummary = null;
+    let weightHistory: Array<{ date: string; weight: number }> = [];
+    let healthAlerts: Array<{ type: string; count: number; lastOccurred: Date | null }> = [];
+
     if (petId) {
       const pet = await prisma.pet.findFirst({
         where: {
@@ -117,7 +120,7 @@ export async function GET(request: NextRequest) {
         include: {
           weightRecords: {
             orderBy: { recordedAt: 'desc' },
-            take: 2,
+            take: 30, // 最近 30 筆體重記錄
           },
         },
       });
@@ -132,6 +135,12 @@ export async function GET(request: NextRequest) {
           if (current > previous * 1.02) weightTrend = 'up';
           else if (current < previous * 0.98) weightTrend = 'down';
         }
+
+        // 體重歷史（用於趨勢圖）
+        weightHistory = weightRecords.map((r: { recordedAt: Date; weight: { toNumber: () => number } }) => ({
+          date: r.recordedAt.toISOString(),
+          weight: r.weight.toNumber(),
+        })).reverse(); // 按時間正序
 
         // Get last medical visit
         const lastMedicalDiary = await prisma.diary.findFirst({
@@ -150,8 +159,44 @@ export async function GET(request: NextRequest) {
           weightTrend,
           lastVetVisit: lastMedicalDiary?.occurredAt || null,
         };
+
+        // 健康異常統計（嘔吐、腹瀉等）
+        const healthKeywords = [
+          { type: 'vomit', keywords: ['吐', '嘔'], label: '嘔吐' },
+          { type: 'diarrhea', keywords: ['拉', '腹瀉', '軟便'], label: '腹瀉' },
+          { type: 'noAppetite', keywords: ['不吃', '沒食慾', '食慾差'], label: '食慾不振' },
+          { type: 'lethargy', keywords: ['沒精神', '精神差', '無力'], label: '精神不佳' },
+        ];
+
+        for (const health of healthKeywords) {
+          const diaries = await prisma.diary.findMany({
+            where: {
+              petId,
+              userId: user.id,
+              occurredAt: { gte: startDate },
+              OR: health.keywords.map((kw) => ({
+                content: { contains: kw },
+              })),
+            },
+            orderBy: { occurredAt: 'desc' },
+          });
+
+          if (diaries.length > 0) {
+            healthAlerts.push({
+              type: health.label,
+              count: diaries.length,
+              lastOccurred: diaries[0].occurredAt,
+            });
+          }
+        }
       }
     }
+
+    // 日曆數據：哪些天有記錄
+    const calendarData = dailyStats.map((stat) => ({
+      date: stat.date,
+      count: Number(stat.count),
+    }));
 
     return NextResponse.json({
       success: true,
@@ -171,6 +216,9 @@ export async function GET(request: NextRequest) {
           date: stat.date,
           count: Number(stat.count),
         })),
+        calendarData,
+        weightHistory,
+        healthAlerts,
         upcomingReminders,
         petSummary,
       },

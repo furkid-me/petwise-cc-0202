@@ -204,10 +204,22 @@ export async function POST(request: NextRequest) {
         })
       );
 
+      // Auto-update pet weight if extracted from diary
+      let weightUpdated = false;
+      if (parseResult.extractedWeight !== undefined) {
+        await prisma.pet.update({
+          where: { id: petId },
+          data: { weight: parseResult.extractedWeight },
+        });
+        weightUpdated = true;
+      }
+
       return NextResponse.json({
         success: true,
         data: createdDiaries,
         aiSummary: parseResult.summary,
+        weightUpdated,
+        newWeight: parseResult.extractedWeight,
       });
     }
 

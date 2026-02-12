@@ -108,6 +108,65 @@ export default function DiaryHistoryPage() {
   const hasActiveFilters =
     searchQuery || selectedCategory !== 'ALL' || startDate || endDate;
 
+  // Quick filter helpers
+  const getDateString = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleQuickFilter = (period: 'today' | 'week' | 'month') => {
+    const today = new Date();
+    const todayStr = getDateString(today);
+
+    if (period === 'today') {
+      // If already today, clear the filter
+      if (startDate === todayStr && endDate === todayStr) {
+        setStartDate('');
+        setEndDate('');
+      } else {
+        setStartDate(todayStr);
+        setEndDate(todayStr);
+      }
+    } else if (period === 'week') {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      const weekStartStr = getDateString(weekStart);
+
+      // If already this week, clear the filter
+      if (startDate === weekStartStr && endDate === todayStr) {
+        setStartDate('');
+        setEndDate('');
+      } else {
+        setStartDate(weekStartStr);
+        setEndDate(todayStr);
+      }
+    } else if (period === 'month') {
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthStartStr = getDateString(monthStart);
+
+      // If already this month, clear the filter
+      if (startDate === monthStartStr && endDate === todayStr) {
+        setStartDate('');
+        setEndDate('');
+      } else {
+        setStartDate(monthStartStr);
+        setEndDate(todayStr);
+      }
+    }
+  };
+
+  // Check which quick filter is active
+  const today = new Date();
+  const todayStr = getDateString(today);
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+  const weekStartStr = getDateString(weekStart);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthStartStr = getDateString(monthStart);
+
+  const isToday = startDate === todayStr && endDate === todayStr;
+  const isThisWeek = startDate === weekStartStr && endDate === todayStr;
+  const isThisMonth = startDate === monthStartStr && endDate === todayStr;
+
   // Group diaries by date
   const groupedDiaries = diaries.reduce((groups, diary) => {
     const date = new Date(diary.occurredAt).toDateString();
@@ -216,6 +275,31 @@ export default function DiaryHistoryPage() {
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Quick Filters */}
+      <div className="mb-4 flex gap-2">
+        <Button
+          variant={isToday ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleQuickFilter('today')}
+        >
+          今天
+        </Button>
+        <Button
+          variant={isThisWeek ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleQuickFilter('week')}
+        >
+          本週
+        </Button>
+        <Button
+          variant={isThisMonth ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleQuickFilter('month')}
+        >
+          本月
+        </Button>
       </div>
 
       {/* Active Filters */}
