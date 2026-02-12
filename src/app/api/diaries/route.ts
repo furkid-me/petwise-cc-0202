@@ -34,10 +34,14 @@ export async function GET(request: NextRequest) {
     if (startDate || endDate) {
       where.occurredAt = {};
       if (startDate) {
-        (where.occurredAt as Record<string, Date>).gte = new Date(startDate);
+        // 將本地日期轉換為當天開始時間 (台灣時區 UTC+8)
+        const start = new Date(startDate + 'T00:00:00+08:00');
+        (where.occurredAt as Record<string, Date>).gte = start;
       }
       if (endDate) {
-        (where.occurredAt as Record<string, Date>).lte = new Date(endDate);
+        // 將本地日期轉換為當天結束時間 (台灣時區 UTC+8)
+        const end = new Date(endDate + 'T23:59:59.999+08:00');
+        (where.occurredAt as Record<string, Date>).lte = end;
       }
     }
 
