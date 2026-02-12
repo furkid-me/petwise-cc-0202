@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { Plus, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,21 +18,42 @@ import type { Diary, Pet } from '@/types';
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const hasFetched = useRef(false);
   const user = useUserStore((state) => state.user);
   const pets = useUserStore((state) => state.pets);
   const setPets = useUserStore((state) => state.setPets);
   const currentPet = useCurrentPet();
+  const currentPetId = currentPet?.id;
   const { setDiaries } = useDiaryStore();
   const todayDiaries = useTodayDiaries();
 
-  const fetchData = useCallback(async (showRefreshing = false) => {
-    if (!currentPet) {
-      setIsLoading(false);
-      return;
-    }
+  // Initial fetch only once per pet
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!currentPetId) {
+        setIsLoading(false);
+        return;
+      }
 
-    if (showRefreshing) setIsRefreshing(true);
-    else setIsLoading(true);
+      setIsLoading(true);
+
+      // Fetch diaries
+      const result = await api.diaries.list({ petId: currentPetId, limit: 20 });
+      if (result.success && result.data) {
+        setDiaries(result.data as Diary[]);
+      }
+
+      setIsLoading(false);
+      hasFetched.current = true;
+    };
+
+    fetchData();
+  }, [currentPetId, setDiaries]);
+
+  const handleRefresh = async () => {
+    if (!currentPetId) return;
+
+    setIsRefreshing(true);
 
     // Fetch fresh pets data
     const petsResult = await api.pets.list();
@@ -41,21 +62,12 @@ export default function HomePage() {
     }
 
     // Fetch diaries
-    const result = await api.diaries.list({ petId: currentPet.id, limit: 20 });
+    const result = await api.diaries.list({ petId: currentPetId, limit: 20 });
     if (result.success && result.data) {
       setDiaries(result.data as Diary[]);
     }
 
-    setIsLoading(false);
     setIsRefreshing(false);
-  }, [currentPet, setDiaries, setPets]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleRefresh = () => {
-    fetchData(true);
   };
 
   // No pets - show onboarding
