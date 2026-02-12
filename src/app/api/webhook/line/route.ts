@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import { sendLineMessage } from '@/lib/line-messaging';
-import { parseDiaryInput } from '@/lib/ai-parser';
+import { parseDiaryInput, ParseResult } from '@/lib/ai-parser';
 
 interface LineEvent {
   type: string;
@@ -36,7 +36,7 @@ interface UserWithPets {
 }
 
 // 暫存用戶的待處理訊息（用於 Quick Reply 選擇寵物後繼續處理）
-const pendingMessages = new Map<string, { text: string; parsedEntries: unknown[] }>();
+const pendingMessages = new Map<string, { text: string; parsedEntries: unknown[]; extractedWeight?: number }>();
 
 // Verify LINE signature
 function verifySignature(body: string, signature: string): boolean {
@@ -187,6 +187,7 @@ async function handleTextMessage(
         pendingMessages.set(lineUserId, {
           text,
           parsedEntries: parsed.entries,
+          extractedWeight: parsed.extractedWeight,
         });
 
         await sendLineMessage(lineUserId, {
@@ -220,7 +221,7 @@ async function handleTextMessage(
     }
 
     // 有確定的寵物，建立日記
-    await createDiaryAndReply(lineUserId, user.id, targetPet, text, parsed.entries, parsed.healthWarning);
+    await createDiaryAndReply(lineUserId, user.id, targetPet, text, parsed.entries, parsed.healthWarning, parsed.extractedWeight);
 
   } catch (error) {
     console.error('Failed to parse diary input:', error);
@@ -237,7 +238,8 @@ async function createDiaryAndReply(
   pet: Pet,
   rawInput: string,
   entries: unknown[],
-  healthWarning?: string
+  healthWarning?: string,
+  extractedWeight?: number
 ) {
   const typedEntries = entries as Array<{
     category: string;
@@ -246,6 +248,20 @@ async function createDiaryAndReply(
     details?: Record<string, unknown>;
     severity?: number;
   }>;
+
+  // 如果有提取到體重，自動更新寵物資料
+  let weightUpdated = false;
+  if (extractedWeight !== undefined && extractedWeight > 0) {
+    try {
+      await prisma.pet.update({
+        where: { id: pet.id },
+        data: { weight: extractedWeight },
+      });
+      weightUpdated = true;
+    } catch (e) {
+      console.error('Failed to update pet weight:', e);
+    }
+  }
 
   // 建立日記記錄
   for (const entry of typedEntries) {
@@ -289,6 +305,10 @@ async function createDiaryAndReply(
     const emoji = categoryEmojis[entry.category] || '📝';
     const name = categoryNames[entry.category] || '其他';
     responseText += `${emoji} ${name}：${entry.content}\n`;
+  }
+
+  if (weightUpdated && extractedWeight) {
+    responseText += `\n📊 已更新體重：${extractedWeight} kg`;
   }
 
   if (healthWarning) {
@@ -354,7 +374,9 @@ async function handlePostback(
         user.id,
         pet,
         pending.text,
-        pending.parsedEntries
+        pending.parsedEntries,
+        undefined,
+        pending.extractedWeight
       );
 
       pendingMessages.delete(lineUserId);
