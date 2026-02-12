@@ -1,18 +1,50 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import { formatDate, getCategoryIcon, getCategoryLabel, getCategoryColor } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pin, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Pin, AlertCircle, Trash2, Loader2 } from 'lucide-react';
+import { api } from '@/hooks/use-api';
 import type { Diary } from '@/types';
 
 interface DiaryCardProps {
   diary: Diary;
   onClick?: () => void;
+  onDelete?: (diaryId: string) => void;
+  showDeleteButton?: boolean;
 }
 
-export function DiaryCard({ diary, onClick }: DiaryCardProps) {
+export function DiaryCard({ diary, onClick, onDelete, showDeleteButton = true }: DiaryCardProps) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    const result = await api.diaries.delete(diary.id);
+    if (result.success) {
+      onDelete?.(diary.id);
+    }
+    setIsDeleting(false);
+    setShowDeleteDialog(false);
+  };
   const categoryVariant = diary.category.toLowerCase() as 'food' | 'health' | 'activity' | 'medical' | 'grooming' | 'behavior' | 'other';
 
   return (
@@ -87,13 +119,54 @@ export function DiaryCard({ diary, onClick }: DiaryCardProps) {
               </div>
             )}
 
-            {/* Time */}
-            <p className="mt-2 text-xs text-muted-foreground">
-              {formatDate(diary.occurredAt, 'relative')}
-            </p>
+            {/* Time & Delete */}
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {formatDate(diary.occurredAt, 'relative')}
+              </p>
+              {showDeleteButton && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確定要刪除這則日記嗎？</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作無法復原。這則日記將會被永久刪除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  刪除中...
+                </>
+              ) : (
+                '確定刪除'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

@@ -289,7 +289,13 @@ export default function DiaryHistoryPage() {
               </div>
               <div className="space-y-2">
                 {groupedDiaries[date].map((diary) => (
-                  <DiaryCard key={diary.id} diary={diary} />
+                  <DiaryCard
+                    key={diary.id}
+                    diary={diary}
+                    onDelete={(diaryId) => {
+                      setDiaries(diaries.filter((d) => d.id !== diaryId));
+                    }}
+                  />
                 ))}
               </div>
             </div>

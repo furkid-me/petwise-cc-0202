@@ -21,7 +21,14 @@ model User {
   displayName     String?   @map("display_name")
   pictureUrl      String?   @map("picture_url")
   statusMessage   String?   @map("status_message")
+
+  // CRM 欄位
+  realName        String?   @map("real_name")
   email           String?
+  phone           String?
+  gender          UserGender?
+  city            String?   // 縣市
+  district        String?   // 區
 
   // 訂閱相關
   subscriptionPlan  SubscriptionPlan @default(FREE) @map("subscription_plan")
@@ -44,8 +51,17 @@ model User {
   reminders       Reminder[]
   familyMembers   FamilyMember[]
   payments        Payment[]
+  redemptionLogs  RedemptionLog[]
 
   @@map("users")
+}
+
+// 用戶性別枚舉
+enum UserGender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
 }
 
 // 訂閱方案枚舉
@@ -358,4 +374,63 @@ model SystemSetting {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@map("system_settings")
+}
+
+// ==================== 兌換碼相關 ====================
+
+// 兌換碼
+model RedemptionCode {
+  id              String    @id @default(cuid())
+  code            String    @unique
+
+  // 方案與時長
+  plan            SubscriptionPlan
+  durationDays    Int       @map("duration_days") // 訂閱天數
+
+  // 使用限制
+  maxUses         Int       @default(1) @map("max_uses")
+  currentUses     Int       @default(0) @map("current_uses")
+
+  // 有效期
+  validFrom       DateTime  @default(now()) @map("valid_from")
+  validUntil      DateTime? @map("valid_until")
+
+  // 狀態
+  isActive        Boolean   @default(true) @map("is_active")
+
+  // 備註
+  description     String?
+  createdBy       String?   @map("created_by")
+
+  // 時間戳記
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // 關聯
+  redemptionLogs  RedemptionLog[]
+
+  @@map("redemption_codes")
+}
+
+// 兌換紀錄
+model RedemptionLog {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  codeId          String    @map("code_id")
+
+  // 兌換時的方案資訊
+  plan            SubscriptionPlan
+  durationDays    Int       @map("duration_days")
+
+  // 訂閱期間
+  periodStart     DateTime  @map("period_start")
+  periodEnd       DateTime  @map("period_end")
+
+  // 時間戳記
+  redeemedAt      DateTime  @default(now()) @map("redeemed_at")
+
+  // 關聯
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code            RedemptionCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+
+  @@map("redemption_logs")
 }

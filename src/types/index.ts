@@ -12,10 +12,18 @@ export interface User {
   lineUserId: string;
   displayName: string | null;
   pictureUrl: string | null;
+  // CRM 欄位
+  realName: string | null;
   email: string | null;
+  phone: string | null;
+  gender: UserGender | null;
+  city: string | null;
+  district: string | null;
+  // 訂閱相關
   subscriptionPlan: SubscriptionPlan;
   subscriptionStart: Date | null;
   subscriptionEnd: Date | null;
+  // 設定
   timezone: string;
   language: string;
   notifyEnabled: boolean;
@@ -23,7 +31,34 @@ export interface User {
   updatedAt: Date;
 }
 
+export type UserGender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
 export type SubscriptionPlan = 'FREE' | 'STANDARD' | 'PREMIUM';
+
+// 兌換碼相關
+export interface RedemptionCode {
+  id: string;
+  code: string;
+  plan: SubscriptionPlan;
+  durationDays: number;
+  maxUses: number;
+  currentUses: number;
+  validFrom: Date;
+  validUntil: Date | null;
+  isActive: boolean;
+  description: string | null;
+  createdAt: Date;
+}
+
+export interface RedeemCodeInput {
+  code: string;
+  // CRM 資料（兌換時必填）
+  realName: string;
+  email: string;
+  phone: string;
+  gender: UserGender;
+  city: string;
+  district: string;
+}
 
 // Pet Types
 export interface Pet {
