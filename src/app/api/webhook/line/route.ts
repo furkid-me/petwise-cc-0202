@@ -57,23 +57,31 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
     const signature = request.headers.get('x-line-signature');
 
+    console.log('[LINE Webhook] Received request');
+
     // Verify signature in production
     if (process.env.NODE_ENV === 'production') {
       if (!signature || !verifySignature(body, signature)) {
+        console.error('[LINE Webhook] Invalid signature');
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
       }
     }
 
     const data: LineWebhookBody = JSON.parse(body);
+    console.log('[LINE Webhook] Events:', JSON.stringify(data.events.map(e => ({ type: e.type, userId: e.source?.userId }))));
 
     // Process each event
     for (const event of data.events) {
-      await handleEvent(event);
+      try {
+        await handleEvent(event);
+      } catch (eventError) {
+        console.error('[LINE Webhook] Event handler error:', eventError);
+      }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('LINE Webhook error:', error);
+    console.error('[LINE Webhook] Error:', error);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -140,8 +148,11 @@ async function handleTextMessage(
   text: string,
   user: UserWithPets | null
 ) {
+  console.log(`[LINE] handleTextMessage: userId=${lineUserId}, text=${text.substring(0, 50)}`);
+
   // 檢查用戶是否有寵物
   if (!user || !user.pets || user.pets.length === 0) {
+    console.log('[LINE] User has no pets');
     await sendLineMessage(lineUserId, {
       type: 'text',
       text: '你還沒有新增寵物喔！\n\n請先點擊下方選單的「我的寵物」來新增你的毛小孩 🐕🐱',
@@ -149,12 +160,16 @@ async function handleTextMessage(
     return;
   }
 
+  console.log(`[LINE] User has ${user.pets.length} pets: ${user.pets.map(p => p.name).join(', ')}`);
+
   try {
     // 取得所有寵物名字
     const petNames = user.pets.map(p => p.name);
 
     // 使用 AI 解析訊息，並傳入寵物名字列表
+    console.log('[LINE] Parsing diary input...');
     const parsed = await parseDiaryInput(text, undefined, petNames);
+    console.log(`[LINE] Parsed ${parsed.entries.length} entries`);
 
     if (parsed.entries.length === 0) {
       await sendLineMessage(lineUserId, {
@@ -224,10 +239,11 @@ async function handleTextMessage(
     await createDiaryAndReply(lineUserId, user.id, targetPet, text, parsed.entries, parsed.healthWarning, parsed.extractedWeight);
 
   } catch (error) {
-    console.error('Failed to parse diary input:', error);
+    console.error('[LINE] Failed to parse diary input:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
     await sendLineMessage(lineUserId, {
       type: 'text',
-      text: '記錄失敗了，請稍後再試 😅',
+      text: `記錄失敗了：${errorMsg.substring(0, 100)}`,
     });
   }
 }
@@ -241,6 +257,8 @@ async function createDiaryAndReply(
   healthWarning?: string,
   extractedWeight?: number
 ) {
+  console.log(`[LINE] createDiaryAndReply: pet=${pet.name}, entries=${entries.length}`);
+
   const typedEntries = entries as Array<{
     category: string;
     subCategory?: string;
@@ -258,25 +276,33 @@ async function createDiaryAndReply(
         data: { weight: extractedWeight },
       });
       weightUpdated = true;
+      console.log(`[LINE] Updated pet weight: ${extractedWeight}`);
     } catch (e) {
-      console.error('Failed to update pet weight:', e);
+      console.error('[LINE] Failed to update pet weight:', e);
     }
   }
 
   // 建立日記記錄
+  console.log('[LINE] Creating diary entries...');
   for (const entry of typedEntries) {
-    await prisma.diary.create({
-      data: {
-        userId,
-        petId: pet.id,
-        rawInput,
-        category: entry.category as 'FOOD' | 'HEALTH' | 'ACTIVITY' | 'MEDICAL' | 'GROOMING' | 'BEHAVIOR' | 'OTHER',
-        subCategory: entry.subCategory,
-        content: entry.content,
-        details: entry.details ? JSON.parse(JSON.stringify(entry.details)) : undefined,
-        severity: entry.severity,
-      },
-    });
+    try {
+      await prisma.diary.create({
+        data: {
+          userId,
+          petId: pet.id,
+          rawInput,
+          category: entry.category as 'FOOD' | 'HEALTH' | 'ACTIVITY' | 'MEDICAL' | 'GROOMING' | 'BEHAVIOR' | 'OTHER',
+          subCategory: entry.subCategory,
+          content: entry.content,
+          details: entry.details ? JSON.parse(JSON.stringify(entry.details)) : undefined,
+          severity: entry.severity,
+        },
+      });
+      console.log(`[LINE] Created diary entry: ${entry.category}`);
+    } catch (dbError) {
+      console.error('[LINE] Failed to create diary entry:', dbError);
+      throw dbError;
+    }
   }
 
   // 組裝回覆訊息
@@ -316,7 +342,8 @@ async function createDiaryAndReply(
   }
 
   // 發送確認訊息，附帶修改和刪除按鈕
-  await sendLineMessage(lineUserId, {
+  console.log(`[LINE] Sending reply: ${responseText.substring(0, 50)}...`);
+  const sent = await sendLineMessage(lineUserId, {
     type: 'text',
     text: responseText,
     quickReply: {
@@ -333,6 +360,7 @@ async function createDiaryAndReply(
       ],
     },
   });
+  console.log(`[LINE] Message sent: ${sent}`);
 }
 
 async function handlePostback(
