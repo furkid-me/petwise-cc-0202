@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
-import { sendLineMessage } from '@/lib/line-messaging';
-import { parseDiaryInput, ParseResult } from '@/lib/ai-parser';
+import {
+  sendLineMessage,
+  buildWelcomeMessage,
+  buildDiaryConfirmMessage,
+  buildNoPetMessage,
+  buildTodaySummaryMessage,
+} from '@/lib/line-messaging';
+import { parseDiaryInput } from '@/lib/ai-parser';
 
 interface LineEvent {
   type: string;
@@ -130,10 +136,8 @@ async function handleFollow(lineUserId: string) {
     });
   }
 
-  await sendLineMessage(lineUserId, {
-    type: 'text',
-    text: '歡迎使用 PetWise 寵物日記！🐾\n\n直接傳訊息給我，我會幫你記錄毛小孩的生活點滴。\n\n例如：「今天麻糬吃了飼料，下午去公園跑步」\n\n或點擊下方選單開始使用完整功能！',
-  });
+  // 發送美化的歡迎訊息
+  await sendLineMessage(lineUserId, buildWelcomeMessage());
 }
 
 async function handleUnfollow(lineUserId: string) {
@@ -153,14 +157,20 @@ async function handleTextMessage(
   // 檢查用戶是否有寵物
   if (!user || !user.pets || user.pets.length === 0) {
     console.log('[LINE] User has no pets');
-    await sendLineMessage(lineUserId, {
-      type: 'text',
-      text: '你還沒有新增寵物喔！\n\n請先點擊下方選單的「我的寵物」來新增你的毛小孩 🐕🐱',
-    });
+    await sendLineMessage(lineUserId, buildNoPetMessage());
     return;
   }
 
   console.log(`[LINE] User has ${user.pets.length} pets: ${user.pets.map(p => p.name).join(', ')}`);
+
+  // 檢查是否為快速查詢指令
+  const trimmedText = text.trim().toLowerCase();
+  const quickCommands = ['今天紀錄', '今日紀錄', '今天記錄', '今日記錄', '今日摘要', '今天摘要'];
+
+  if (quickCommands.some(cmd => trimmedText.includes(cmd))) {
+    await handleTodaySummaryCommand(lineUserId, user);
+    return;
+  }
 
   try {
     // 取得所有寵物名字
@@ -315,48 +325,20 @@ async function createDiaryAndReply(
     }
   }
 
-  // 組裝回覆訊息
-  const categoryEmojis: Record<string, string> = {
-    FOOD: '🍽️',
-    HEALTH: '❤️',
-    ACTIVITY: '🏃',
-    MEDICAL: '🏥',
-    GROOMING: '✨',
-    BEHAVIOR: '🐾',
-    OTHER: '📝',
-  };
+  // 使用 Flex Message 發送確認訊息
+  const entries = typedEntries.map((entry) => ({
+    category: entry.category,
+    content: entry.content,
+  }));
 
-  const categoryNames: Record<string, string> = {
-    FOOD: '飲食',
-    HEALTH: '健康',
-    ACTIVITY: '活動',
-    MEDICAL: '醫療',
-    GROOMING: '美容',
-    BEHAVIOR: '行為',
-    OTHER: '其他',
-  };
-
-  let responseText = `✅ 已為【${pet.name}】記錄：\n\n`;
-  for (const entry of typedEntries) {
-    const emoji = categoryEmojis[entry.category] || '📝';
-    const name = categoryNames[entry.category] || '其他';
-    responseText += `${emoji} ${name}：${entry.content}\n`;
-  }
-
-  if (weightUpdated && extractedWeight) {
-    responseText += `\n📊 已更新體重：${extractedWeight} kg`;
-  }
-
-  if (healthWarning) {
-    responseText += `\n⚠️ ${healthWarning}`;
-  }
-
-  // 發送確認訊息（不包含修改按鈕，避免 data 超過 300 字元限制）
-  console.log(`[LINE] Sending reply: ${responseText.substring(0, 50)}...`);
-  const sent = await sendLineMessage(lineUserId, {
-    type: 'text',
-    text: responseText,
+  console.log(`[LINE] Sending flex message for ${entries.length} entries`);
+  const flexMessage = buildDiaryConfirmMessage(pet.name, entries, {
+    weightUpdated,
+    newWeight: extractedWeight,
+    healthWarning,
   });
+
+  const sent = await sendLineMessage(lineUserId, flexMessage);
   console.log(`[LINE] Message sent: ${sent}`);
 }
 
@@ -505,7 +487,129 @@ async function handlePostback(
       }
       break;
     }
+
+    case 'today_summary': {
+      // 查看單一寵物今日摘要
+      const petId = params.get('petId');
+      const petName = params.get('petName');
+      if (petId && petName) {
+        await sendPetTodaySummary(lineUserId, petId, decodeURIComponent(petName));
+      }
+      break;
+    }
+
+    case 'today_summary_all': {
+      // 查看所有寵物今日摘要
+      if (user && user.pets.length > 0) {
+        for (const pet of user.pets) {
+          await sendPetTodaySummary(lineUserId, pet.id, pet.name);
+        }
+      }
+      break;
+    }
   }
+}
+
+// 處理今日摘要查詢指令
+async function handleTodaySummaryCommand(
+  lineUserId: string,
+  user: UserWithPets
+) {
+  // 取得今天的日期範圍（台灣時區）
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  // 如果只有一隻寵物，直接顯示摘要
+  if (user.pets.length === 1) {
+    const pet = user.pets[0];
+    await sendPetTodaySummary(lineUserId, pet.id, pet.name);
+    return;
+  }
+
+  // 多隻寵物，讓用戶選擇
+  await sendLineMessage(lineUserId, {
+    type: 'text',
+    text: '要查看哪隻寵物的今日紀錄？',
+    quickReply: {
+      items: [
+        ...user.pets.slice(0, 10).map(pet => ({
+          type: 'action' as const,
+          action: {
+            type: 'postback' as const,
+            label: pet.name.slice(0, 20),
+            data: `action=today_summary&petId=${pet.id}&petName=${encodeURIComponent(pet.name)}`,
+            displayText: pet.name,
+          },
+        })),
+        {
+          type: 'action' as const,
+          action: {
+            type: 'postback' as const,
+            label: '全部寵物',
+            data: 'action=today_summary_all',
+            displayText: '全部寵物',
+          },
+        },
+      ],
+    },
+  });
+}
+
+// 發送單一寵物今日摘要
+async function sendPetTodaySummary(
+  lineUserId: string,
+  petId: string,
+  petName: string
+) {
+  // 取得今天的日期範圍（台灣時區 UTC+8）
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  // 查詢今天的日記
+  const diaries = await prisma.diary.findMany({
+    where: {
+      petId,
+      occurredAt: {
+        gte: todayStart,
+        lt: todayEnd,
+      },
+    },
+    select: {
+      category: true,
+    },
+  });
+
+  // 取得寵物資料（包含體重）
+  const pet = await prisma.pet.findUnique({
+    where: { id: petId },
+    select: { weight: true },
+  });
+
+  if (diaries.length === 0) {
+    await sendLineMessage(lineUserId, {
+      type: 'text',
+      text: `📝 ${petName} 今天還沒有紀錄喔！\n\n直接傳訊息給我來記錄吧！`,
+    });
+    return;
+  }
+
+  // 統計各分類數量
+  const categories: Record<string, number> = {};
+  for (const diary of diaries) {
+    categories[diary.category] = (categories[diary.category] || 0) + 1;
+  }
+
+  const summaryMessage = buildTodaySummaryMessage(petName, {
+    totalEntries: diaries.length,
+    categories,
+    latestWeight: pet?.weight || undefined,
+  });
+
+  await sendLineMessage(lineUserId, summaryMessage);
 }
 
 // GET endpoint for LINE webhook verification
