@@ -130,6 +130,15 @@ export default function HomePage() {
               <DiaryCard key={diary.id} diary={diary} />
             ))
           )}
+
+          {/* 查看全部記錄連結 */}
+          <div className="pt-2 text-center">
+            <Link href="/diary/history">
+              <Button variant="ghost" size="sm" className="text-primary">
+                查看全部記錄 →
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
