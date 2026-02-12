@@ -120,14 +120,17 @@ export default function DiaryHistoryPage() {
   const hasActiveFilters =
     searchQuery || selectedCategory !== 'ALL' || startDate || endDate;
 
-  // Quick filter helpers
-  const getDateString = (date: Date) => {
-    return date.toISOString().split('T')[0];
+  // Quick filter helpers - 使用本地時區
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const handleQuickFilter = (period: 'today' | 'week' | 'month') => {
     const today = new Date();
-    const todayStr = getDateString(today);
+    const todayStr = getLocalDateString(today);
 
     if (period === 'today') {
       // If already today, clear the filter
@@ -141,7 +144,7 @@ export default function DiaryHistoryPage() {
     } else if (period === 'week') {
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - today.getDay());
-      const weekStartStr = getDateString(weekStart);
+      const weekStartStr = getLocalDateString(weekStart);
 
       // If already this week, clear the filter
       if (startDate === weekStartStr && endDate === todayStr) {
@@ -153,7 +156,7 @@ export default function DiaryHistoryPage() {
       }
     } else if (period === 'month') {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthStartStr = getDateString(monthStart);
+      const monthStartStr = getLocalDateString(monthStart);
 
       // If already this month, clear the filter
       if (startDate === monthStartStr && endDate === todayStr) {
@@ -168,12 +171,12 @@ export default function DiaryHistoryPage() {
 
   // Check which quick filter is active
   const today = new Date();
-  const todayStr = getDateString(today);
+  const todayStr = getLocalDateString(today);
   const weekStart = new Date(today);
   weekStart.setDate(today.getDate() - today.getDay());
-  const weekStartStr = getDateString(weekStart);
+  const weekStartStr = getLocalDateString(weekStart);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const monthStartStr = getDateString(monthStart);
+  const monthStartStr = getLocalDateString(monthStart);
 
   const isToday = startDate === todayStr && endDate === todayStr;
   const isThisWeek = startDate === weekStartStr && endDate === todayStr;
