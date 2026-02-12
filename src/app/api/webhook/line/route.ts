@@ -163,13 +163,82 @@ async function handleTextMessage(
 
   console.log(`[LINE] User has ${user.pets.length} pets: ${user.pets.map(p => p.name).join(', ')}`);
 
-  // 檢查是否為快速查詢指令
-  const trimmedText = text.trim().toLowerCase();
-  const quickCommands = ['今天紀錄', '今日紀錄', '今天記錄', '今日記錄', '今日摘要', '今天摘要'];
+  // 檢查是否為快速查詢/導航指令
+  const trimmedText = text.trim();
+  const lowerText = trimmedText.toLowerCase();
 
-  if (quickCommands.some(cmd => trimmedText.includes(cmd))) {
+  // 今日摘要指令
+  const summaryCommands = ['今天紀錄', '今日紀錄', '今天記錄', '今日記錄', '今日摘要', '今天摘要'];
+  if (summaryCommands.some(cmd => lowerText.includes(cmd))) {
     await handleTodaySummaryCommand(lineUserId, user);
     return;
+  }
+
+  // 導航指令 - 回覆 LIFF 連結
+  const navigationCommands: Record<string, { path: string; label: string }> = {
+    '我的寵物': { path: '/pets', label: '我的寵物' },
+    '寵物': { path: '/pets', label: '我的寵物' },
+    '日記': { path: '/diary/history', label: '日記紀錄' },
+    '日記紀錄': { path: '/diary/history', label: '日記紀錄' },
+    '日記記錄': { path: '/diary/history', label: '日記紀錄' },
+    '歷史紀錄': { path: '/diary/history', label: '日記紀錄' },
+    '統計': { path: '/stats', label: '統計分析' },
+    '統計分析': { path: '/stats', label: '統計分析' },
+    '提醒': { path: '/reminders', label: '提醒設定' },
+    '提醒設定': { path: '/reminders', label: '提醒設定' },
+    '首頁': { path: '/', label: '首頁' },
+    '主頁': { path: '/', label: '首頁' },
+  };
+
+  for (const [keyword, config] of Object.entries(navigationCommands)) {
+    if (trimmedText === keyword || lowerText === keyword.toLowerCase()) {
+      const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '';
+      const liffUrl = `https://liff.line.me/${liffId}${config.path}`;
+
+      await sendLineMessage(lineUserId, {
+        type: 'flex',
+        altText: config.label,
+        contents: {
+          type: 'bubble',
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: `📱 ${config.label}`,
+                weight: 'bold',
+                size: 'lg',
+              },
+              {
+                type: 'text',
+                text: '點擊下方按鈕開啟',
+                size: 'sm',
+                color: '#888888',
+                margin: 'md',
+              },
+            ],
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                style: 'primary',
+                color: '#6366f1',
+                action: {
+                  type: 'uri',
+                  label: `開啟${config.label}`,
+                  uri: liffUrl,
+                },
+              },
+            ],
+          },
+        },
+      });
+      return;
+    }
   }
 
   try {
