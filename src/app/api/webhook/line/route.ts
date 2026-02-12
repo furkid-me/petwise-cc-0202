@@ -341,24 +341,11 @@ async function createDiaryAndReply(
     responseText += `\n⚠️ ${healthWarning}`;
   }
 
-  // 發送確認訊息，附帶修改和刪除按鈕
+  // 發送確認訊息（不包含修改按鈕，避免 data 超過 300 字元限制）
   console.log(`[LINE] Sending reply: ${responseText.substring(0, 50)}...`);
   const sent = await sendLineMessage(lineUserId, {
     type: 'text',
     text: responseText,
-    quickReply: {
-      items: [
-        {
-          type: 'action',
-          action: {
-            type: 'postback',
-            label: '📝 修改寵物',
-            data: `action=change_pet&rawInput=${encodeURIComponent(rawInput)}&entries=${encodeURIComponent(JSON.stringify(typedEntries))}`,
-            displayText: '修改寵物',
-          },
-        },
-      ],
-    },
   });
   console.log(`[LINE] Message sent: ${sent}`);
 }
