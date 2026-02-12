@@ -113,6 +113,13 @@ export async function parseDiaryInput(
     }
 
     const result = JSON.parse(content) as ParseResult;
+
+    // 驗證結果：如果 AI 沒有回傳有效的 entries，使用 fallback
+    if (!result.entries || result.entries.length === 0) {
+      console.log('AI returned empty entries, using fallback');
+      return createFallbackResult(input);
+    }
+
     return result;
   } catch (error) {
     console.error('AI parsing error:', error);
@@ -126,15 +133,15 @@ function createFallbackResult(input: string): ParseResult {
   let category: ParsedDiaryEntry['category'] = 'OTHER';
 
   // 簡單關鍵字匹配
-  if (/吃|喝|飼料|罐頭|零食|食|餐|飯/.test(input)) {
+  if (/吃|喝|飼料|罐頭|零食|食|餐|飯|餵/.test(input)) {
     category = 'FOOD';
-  } else if (/散步|走|跑|玩|運動|睡|遊/.test(input)) {
+  } else if (/散步|走|跑|玩|運動|睡|遊|溜/.test(input)) {
     category = 'ACTIVITY';
-  } else if (/醫|診|疫苗|藥|打針|驅蟲/.test(input)) {
+  } else if (/醫|診|疫苗|藥|打針|驅蟲|看病/.test(input)) {
     category = 'MEDICAL';
-  } else if (/洗澡|洗|剪|梳|毛|美容/.test(input)) {
+  } else if (/洗澡|洗|剪|梳|毛|美容|修/.test(input)) {
     category = 'GROOMING';
-  } else if (/便|尿|吐|拉|嘔|體重|精神/.test(input)) {
+  } else if (/便|尿|吐|拉|嘔|體重|精神|量|公斤|kg|磅/.test(input)) {
     category = 'HEALTH';
   } else if (/叫|咬|行為|情緒|脾氣/.test(input)) {
     category = 'BEHAVIOR';
@@ -142,9 +149,10 @@ function createFallbackResult(input: string): ParseResult {
 
   // 嘗試提取體重
   let extractedWeight: number | undefined;
-  // 匹配體重數字：支援「體重5.2公斤」、「5.2kg」、「5.2公斤」、「體重是5.2」等格式
-  const weightMatch = input.match(/(?:體重[是為]?)?(\d+(?:\.\d+)?)\s*(?:公斤|kg|KG|千克)/i) ||
-                      input.match(/體重[是為]?\s*(\d+(?:\.\d+)?)/);
+  // 匹配體重數字：支援「體重5.2公斤」、「5.2kg」、「5.2公斤」、「體重是5.2」、「量5公斤」等格式
+  const weightMatch = input.match(/(?:體重|量)?[是為]?\s*(\d+(?:\.\d+)?)\s*(?:公斤|kg|KG|千克)/i) ||
+                      input.match(/體重[是為]?\s*(\d+(?:\.\d+)?)/) ||
+                      input.match(/量[了]?\s*(\d+(?:\.\d+)?)\s*(?:公斤|kg)?/i);
   if (weightMatch) {
     extractedWeight = parseFloat(weightMatch[1]);
     // 合理性檢查：體重應該在 0.1-200 公斤之間
@@ -153,12 +161,18 @@ function createFallbackResult(input: string): ParseResult {
     }
   }
 
+  // 生成更好的內容描述
+  let content = input;
+  if (extractedWeight && category === 'HEALTH') {
+    content = `體重測量：${extractedWeight} 公斤`;
+  }
+
   const result: ParseResult = {
     entries: [
       {
         category,
-        content: input,
-        details: {},
+        content,
+        details: extractedWeight ? { weight: extractedWeight } : {},
       },
     ],
     summary: input,
