@@ -606,7 +606,7 @@ async function sendPetTodaySummary(
   const summaryMessage = buildTodaySummaryMessage(petName, {
     totalEntries: diaries.length,
     categories,
-    latestWeight: pet?.weight || undefined,
+    latestWeight: pet?.weight ? Number(pet.weight) : undefined,
   });
 
   await sendLineMessage(lineUserId, summaryMessage);
