@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { User, Bell, CreditCard, LogOut, ChevronRight, HelpCircle, Gift } from 'lucide-react';
+import { User, Bell, CreditCard, LogOut, ChevronRight, HelpCircle, Gift, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -96,6 +96,24 @@ export default function SettingsPage() {
                 <p className="font-medium">兌換碼</p>
                 <p className="text-sm text-muted-foreground">
                   輸入兌換碼升級方案
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </CardContent>
+        </Link>
+      </Card>
+
+      {/* Reminders */}
+      <Card className="mb-4">
+        <Link href="/reminders">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">提醒設定</p>
+                <p className="text-sm text-muted-foreground">
+                  疫苗、驅蟲、看診等提醒
                 </p>
               </div>
             </div>
