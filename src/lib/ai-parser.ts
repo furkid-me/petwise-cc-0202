@@ -23,76 +23,173 @@ export interface ParseResult {
   entries: ParsedDiaryEntry[];
   summary: string;
   healthWarning?: string;
-  mentionedPetName?: string; // 訊息中提到的寵物名字
-  extractedWeight?: number; // 如果提到體重，提取體重值（公斤）
+  mentionedPetName?: string;
+  extractedWeight?: number;
 }
 
-const SYSTEM_PROMPT = `你是一個寵物日記助手，專門解析飼主對寵物的口語化描述。
+// 健康警示關鍵字（需要特別注意的症狀）
+const HEALTH_WARNINGS: Record<string, { keywords: RegExp; warning: string; severity: number }> = {
+  vomiting: {
+    keywords: /吐|嘔|反胃/,
+    warning: '嘔吐可能是消化問題或其他疾病的徵兆，若持續發生請就醫',
+    severity: 3,
+  },
+  diarrhea: {
+    keywords: /拉肚子|腹瀉|軟便|水便|稀便/,
+    warning: '腹瀉可能導致脫水，請注意補充水分，若持續超過24小時請就醫',
+    severity: 3,
+  },
+  bloodInStool: {
+    keywords: /便血|血便|大便有血/,
+    warning: '便血是嚴重警訊，請盡快就醫檢查',
+    severity: 5,
+  },
+  noAppetite: {
+    keywords: /不吃|沒食慾|食慾不振|不想吃|吃不下/,
+    warning: '食慾下降可能是身體不適的訊號，請觀察其他症狀',
+    severity: 2,
+  },
+  lethargy: {
+    keywords: /沒精神|精神不好|懶懶的|不愛動|無精打采|虛弱/,
+    warning: '精神不振可能代表身體不舒服，請持續觀察',
+    severity: 2,
+  },
+  coughing: {
+    keywords: /咳嗽|咳|乾咳/,
+    warning: '持續咳嗽可能是呼吸道問題，建議就醫檢查',
+    severity: 3,
+  },
+  breathing: {
+    keywords: /喘|呼吸急促|呼吸困難|喘氣/,
+    warning: '呼吸異常需要立即關注，若情況嚴重請立即就醫',
+    severity: 4,
+  },
+  limping: {
+    keywords: /跛|一拐一拐|腳痛|不敢踩|走路怪怪/,
+    warning: '行動異常可能是受傷或關節問題，建議檢查',
+    severity: 3,
+  },
+  scratching: {
+    keywords: /一直抓|狂抓|皮膚|紅腫|掉毛嚴重/,
+    warning: '持續抓癢可能是皮膚問題或過敏，建議就醫',
+    severity: 2,
+  },
+  eyeIssue: {
+    keywords: /眼睛紅|眼屎多|流眼淚|眼睛腫/,
+    warning: '眼睛異常需要注意，若持續請就醫',
+    severity: 2,
+  },
+  urineIssue: {
+    keywords: /尿血|血尿|頻尿|尿不出來|尿很少/,
+    warning: '泌尿問題可能很緊急，特別是尿不出來，請盡快就醫',
+    severity: 4,
+  },
+  weightLoss: {
+    keywords: /變瘦|消瘦|體重下降|越來越瘦/,
+    warning: '體重明顯下降可能是健康問題的徵兆，建議就醫檢查',
+    severity: 3,
+  },
+};
 
-你的任務是：
-1. 將用戶的口語化輸入解析成結構化的日記記錄
-2. 一個輸入可能包含多個記錄（例如飲食+運動）
-3. 為每個記錄分類並提取詳細資訊
-4. 從訊息中辨識寵物名字（如果有提到的話）
+const SYSTEM_PROMPT = `你是專業的寵物日記助手，專門解析台灣飼主對寵物的口語化描述。
 
-分類說明：
-- FOOD: 飲食相關（吃東西、喝水、零食、保健品）
-- HEALTH: 健康狀況（排泄、嘔吐、症狀、體重、精神狀態）
-- ACTIVITY: 活動（散步、運動、玩耍、睡眠）
-- MEDICAL: 醫療（疫苗、驅蟲、看診、用藥）
-- GROOMING: 美容（洗澡、梳毛、剪指甲）
-- BEHAVIOR: 行為（情緒、異常行為、社交）
-- OTHER: 其他
+## 任務
+將用戶的口語化輸入解析成結構化的日記記錄，一個輸入可能包含多個記錄。
 
-輸出格式（JSON）：
+## 分類規則（嚴格依照以下定義）
+
+**FOOD 飲食**：吃東西、喝水、零食、飼料、罐頭、鮮食、保健品、食慾
+- 範例：「吃了飼料」「喝很多水」「給零食」「食慾很好」
+
+**HEALTH 健康**：排泄（大便、尿尿）、體重、精神狀態、身體狀況、症狀
+- 範例：「大便正常」「尿尿顏色正常」「體重5公斤」「精神很好」「有點懶懶的」
+
+**ACTIVITY 活動**：散步、運動、玩耍、睡眠、外出
+- 範例：「散步30分鐘」「在家玩球」「睡很久」「去公園跑步」
+
+**MEDICAL 醫療**：疫苗、驅蟲、看診、吃藥、打針、健檢、手術
+- 範例：「打疫苗」「吃驅蟲藥」「看醫生」「回診」
+
+**GROOMING 美容**：洗澡、梳毛、剪指甲、剃毛、清耳朵、刷牙
+- 範例：「洗澡了」「梳毛15分鐘」「剪指甲」「清耳朵」
+
+**BEHAVIOR 行為**：情緒、特殊行為、與人互動、叫聲、異常舉動
+- 範例：「今天很黏人」「一直叫」「學會握手」「對陌生人吠叫」
+
+**OTHER 其他**：無法歸類的內容
+
+## 體重提取規則
+當訊息中提到體重時，提取數字並轉換為公斤：
+- 「5公斤」「5kg」「5KG」→ 5
+- 「5.2公斤」→ 5.2
+- 「4800克」「4800g」→ 4.8
+- 「10磅」→ 4.54（1磅=0.454公斤）
+
+## 健康警示偵測
+偵測以下症狀並在 healthWarning 中標記：
+- 嘔吐、腹瀉、便血、食慾不振
+- 精神不振、咳嗽、呼吸異常
+- 跛行、皮膚問題、眼睛異常
+- 泌尿問題（血尿、頻尿、尿不出來）
+- 明顯體重下降
+
+## 輸出格式（JSON）
 {
   "entries": [
     {
       "category": "FOOD",
       "subCategory": "主食",
-      "content": "早上吃了一碗飼料",
+      "content": "早上吃了一碗飼料，食慾很好",
       "details": {
         "mealType": "早餐",
         "foodType": "飼料",
         "amount": "一碗",
-        "appetite": "正常"
+        "appetite": "好"
       },
       "mood": 4,
+      "severity": null,
       "tags": ["正常飲食"]
     }
   ],
-  "summary": "今天飲食正常，運動量充足",
+  "summary": "簡短摘要",
   "mentionedPetName": "小白",
-  "extractedWeight": 5.2
+  "extractedWeight": 5.2,
+  "healthWarning": "偵測到嘔吐症狀，若持續請就醫"
 }
 
-注意事項：
-- mood/severity 使用 1-5 分制（1=很差, 5=很好）
-- 如果提到需要提醒的事項（如下次疫苗），提供 reminderSuggestion
-- 保持原文的重要細節，不要過度簡化
-- 如果無法判斷分類，使用 OTHER
-- mentionedPetName: 如果訊息中有提到寵物名字（如「小白今天...」、「咪咪吃了...」），請提取該名字；如果沒有提到則不要包含此欄位
-- extractedWeight: 如果訊息中有提到體重數字（如「體重5.2公斤」、「量了體重是4.8kg」、「現在3公斤」），請提取體重數字（轉換為公斤）；如果沒有提到體重則不要包含此欄位`;
+## 注意事項
+- mood: 1-5分（1=很差, 5=很好），僅用於正面記錄
+- severity: 1-5分（1=輕微, 5=嚴重），僅用於負面症狀
+- 保持原文重要細節
+- mentionedPetName: 僅當訊息中明確提到寵物名字時才填寫
+- healthWarning: 僅當偵測到需要注意的症狀時才填寫`;
 
 export async function parseDiaryInput(
   input: string,
   petName?: string,
   allPetNames?: string[]
 ): Promise<ParseResult> {
-  // 如果沒有 OpenAI API key，直接使用 fallback
+  // 先進行本地健康警示檢測
+  const localHealthWarning = detectHealthWarnings(input);
+
+  // 如果沒有 OpenAI API key，使用強化的 fallback
   if (!process.env.OPENAI_API_KEY) {
     console.log('No OpenAI API key, using fallback parser');
-    return createFallbackResult(input);
+    const result = createFallbackResult(input, allPetNames);
+    if (localHealthWarning && !result.healthWarning) {
+      result.healthWarning = localHealthWarning;
+    }
+    return result;
   }
 
   let userMessage = `飼主描述：${input}`;
 
   if (petName) {
-    userMessage = `寵物名字：${petName}\n\n${userMessage}`;
+    userMessage = `目前選擇的寵物：${petName}\n\n${userMessage}`;
   }
 
   if (allPetNames && allPetNames.length > 0) {
-    userMessage = `用戶的寵物列表：${allPetNames.join('、')}\n\n${userMessage}`;
+    userMessage = `用戶的所有寵物：${allPetNames.join('、')}\n\n${userMessage}`;
   }
 
   try {
@@ -103,7 +200,7 @@ export async function parseDiaryInput(
         { role: 'user', content: userMessage },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.3,
+      temperature: 0.2, // 降低溫度提高一致性
       max_tokens: 1000,
     });
 
@@ -114,75 +211,233 @@ export async function parseDiaryInput(
 
     const result = JSON.parse(content) as ParseResult;
 
-    // 驗證結果：如果 AI 沒有回傳有效的 entries，使用 fallback
+    // 驗證結果
     if (!result.entries || result.entries.length === 0) {
       console.log('AI returned empty entries, using fallback');
-      return createFallbackResult(input);
+      const fallback = createFallbackResult(input, allPetNames);
+      if (localHealthWarning && !fallback.healthWarning) {
+        fallback.healthWarning = localHealthWarning;
+      }
+      return fallback;
+    }
+
+    // 補充本地健康警示檢測（如果 AI 沒有偵測到）
+    if (localHealthWarning && !result.healthWarning) {
+      result.healthWarning = localHealthWarning;
     }
 
     return result;
   } catch (error) {
     console.error('AI parsing error:', error);
-    return createFallbackResult(input);
+    const fallback = createFallbackResult(input, allPetNames);
+    if (localHealthWarning && !fallback.healthWarning) {
+      fallback.healthWarning = localHealthWarning;
+    }
+    return fallback;
   }
 }
 
-// 簡單的關鍵字分類 fallback
-function createFallbackResult(input: string): ParseResult {
-  const lowerInput = input.toLowerCase();
-  let category: ParsedDiaryEntry['category'] = 'OTHER';
+// 本地健康警示偵測
+function detectHealthWarnings(input: string): string | undefined {
+  const warnings: Array<{ warning: string; severity: number }> = [];
 
-  // 簡單關鍵字匹配
-  if (/吃|喝|飼料|罐頭|零食|食|餐|飯|餵/.test(input)) {
-    category = 'FOOD';
-  } else if (/散步|走|跑|玩|運動|睡|遊|溜/.test(input)) {
-    category = 'ACTIVITY';
-  } else if (/醫|診|疫苗|藥|打針|驅蟲|看病/.test(input)) {
-    category = 'MEDICAL';
-  } else if (/洗澡|洗|剪|梳|毛|美容|修/.test(input)) {
-    category = 'GROOMING';
-  } else if (/便|尿|吐|拉|嘔|體重|精神|量|公斤|kg|磅/.test(input)) {
-    category = 'HEALTH';
-  } else if (/叫|咬|行為|情緒|脾氣/.test(input)) {
-    category = 'BEHAVIOR';
-  }
-
-  // 嘗試提取體重
-  let extractedWeight: number | undefined;
-  // 匹配體重數字：支援「體重5.2公斤」、「5.2kg」、「5.2公斤」、「體重是5.2」、「量5公斤」等格式
-  const weightMatch = input.match(/(?:體重|量)?[是為]?\s*(\d+(?:\.\d+)?)\s*(?:公斤|kg|KG|千克)/i) ||
-                      input.match(/體重[是為]?\s*(\d+(?:\.\d+)?)/) ||
-                      input.match(/量[了]?\s*(\d+(?:\.\d+)?)\s*(?:公斤|kg)?/i);
-  if (weightMatch) {
-    extractedWeight = parseFloat(weightMatch[1]);
-    // 合理性檢查：體重應該在 0.1-200 公斤之間
-    if (extractedWeight < 0.1 || extractedWeight > 200) {
-      extractedWeight = undefined;
+  for (const [, config] of Object.entries(HEALTH_WARNINGS)) {
+    if (config.keywords.test(input)) {
+      warnings.push({ warning: config.warning, severity: config.severity });
     }
   }
 
-  // 生成更好的內容描述
-  let content = input;
-  if (extractedWeight && category === 'HEALTH') {
-    content = `體重測量：${extractedWeight} 公斤`;
+  if (warnings.length === 0) {
+    return undefined;
   }
 
+  // 按嚴重度排序，回傳最嚴重的警示
+  warnings.sort((a, b) => b.severity - a.severity);
+  return warnings[0].warning;
+}
+
+// 強化的 fallback 解析器
+function createFallbackResult(input: string, allPetNames?: string[]): ParseResult {
+  const entries: ParsedDiaryEntry[] = [];
+  let mentionedPetName: string | undefined;
+
+  // 嘗試辨識寵物名字
+  if (allPetNames && allPetNames.length > 0) {
+    for (const name of allPetNames) {
+      if (input.includes(name)) {
+        mentionedPetName = name;
+        break;
+      }
+    }
+  }
+
+  // 分析輸入可能包含的多個主題
+  const topics = analyzeTopics(input);
+
+  if (topics.length === 0) {
+    // 無法辨識，歸類為 OTHER
+    entries.push({
+      category: 'OTHER',
+      content: input,
+      details: {},
+    });
+  } else {
+    for (const topic of topics) {
+      entries.push({
+        category: topic.category,
+        content: topic.content,
+        details: topic.details,
+        severity: topic.severity,
+      });
+    }
+  }
+
+  // 提取體重
+  const extractedWeight = extractWeight(input);
+
+  // 健康警示
+  const healthWarning = detectHealthWarnings(input);
+
   const result: ParseResult = {
-    entries: [
-      {
-        category,
-        content,
-        details: extractedWeight ? { weight: extractedWeight } : {},
-      },
-    ],
+    entries,
     summary: input,
   };
+
+  if (mentionedPetName) {
+    result.mentionedPetName = mentionedPetName;
+  }
 
   if (extractedWeight !== undefined) {
     result.extractedWeight = extractedWeight;
   }
 
+  if (healthWarning) {
+    result.healthWarning = healthWarning;
+  }
+
   return result;
+}
+
+interface Topic {
+  category: ParsedDiaryEntry['category'];
+  content: string;
+  details: Record<string, unknown>;
+  severity?: number;
+}
+
+// 主題分析
+function analyzeTopics(input: string): Topic[] {
+  const topics: Topic[] = [];
+
+  // 飲食相關
+  if (/吃|喝|飼料|罐頭|零食|食|餐|飯|餵|鮮食|飲食|食慾/.test(input)) {
+    const appetite = /食慾很好|吃很多|吃光/.test(input) ? '好' :
+                     /食慾不好|不吃|吃不下|沒食慾/.test(input) ? '差' : '正常';
+    topics.push({
+      category: 'FOOD',
+      content: extractRelevantContent(input, /吃|喝|飼料|罐頭|零食|食|餐|飯|餵|鮮食|食慾/),
+      details: { appetite },
+      severity: appetite === '差' ? 2 : undefined,
+    });
+  }
+
+  // 活動相關
+  if (/散步|走|跑|玩|運動|睡|遊|溜|公園|外出/.test(input)) {
+    const durationMatch = input.match(/(\d+)\s*(?:分鐘|分|小時|hr)/);
+    topics.push({
+      category: 'ACTIVITY',
+      content: extractRelevantContent(input, /散步|走|跑|玩|運動|睡|遊|溜|公園|外出/),
+      details: durationMatch ? { duration: durationMatch[0] } : {},
+    });
+  }
+
+  // 醫療相關
+  if (/醫|診|疫苗|藥|打針|驅蟲|看病|健檢|手術|回診/.test(input)) {
+    topics.push({
+      category: 'MEDICAL',
+      content: extractRelevantContent(input, /醫|診|疫苗|藥|打針|驅蟲|看病|健檢|手術|回診/),
+      details: {},
+    });
+  }
+
+  // 美容相關
+  if (/洗澡|洗|剪|梳|毛|美容|修|清耳|刷牙|指甲/.test(input)) {
+    topics.push({
+      category: 'GROOMING',
+      content: extractRelevantContent(input, /洗澡|洗|剪|梳|毛|美容|修|清耳|刷牙|指甲/),
+      details: {},
+    });
+  }
+
+  // 健康相關（排泄、體重、精神）
+  if (/便|尿|吐|拉|嘔|體重|精神|量|公斤|kg|磅|克|大便|小便|排泄/.test(input)) {
+    const weight = extractWeight(input);
+    const severity = /吐|嘔|拉肚子|血/.test(input) ? 3 : undefined;
+    topics.push({
+      category: 'HEALTH',
+      content: weight ? `體重 ${weight} 公斤` : extractRelevantContent(input, /便|尿|吐|拉|嘔|體重|精神|大便|小便/),
+      details: weight ? { weight } : {},
+      severity,
+    });
+  }
+
+  // 行為相關
+  if (/叫|咬|行為|情緒|脾氣|黏人|興奮|害怕|緊張|攻擊/.test(input)) {
+    topics.push({
+      category: 'BEHAVIOR',
+      content: extractRelevantContent(input, /叫|咬|行為|情緒|脾氣|黏人|興奮|害怕|緊張|攻擊/),
+      details: {},
+    });
+  }
+
+  return topics;
+}
+
+// 提取相關內容
+function extractRelevantContent(input: string, pattern: RegExp): string {
+  // 簡單處理：回傳原始輸入
+  // 更複雜的實作可以只提取相關句子
+  return input;
+}
+
+// 體重提取
+function extractWeight(input: string): number | undefined {
+  // 公斤
+  let match = input.match(/(\d+(?:\.\d+)?)\s*(?:公斤|kg|KG|千克)/i);
+  if (match) {
+    const weight = parseFloat(match[1]);
+    if (weight >= 0.1 && weight <= 200) return weight;
+  }
+
+  // 克
+  match = input.match(/(\d+(?:\.\d+)?)\s*(?:克|g|G)(?!斤)/i);
+  if (match) {
+    const weight = parseFloat(match[1]) / 1000;
+    if (weight >= 0.1 && weight <= 200) return Math.round(weight * 100) / 100;
+  }
+
+  // 磅
+  match = input.match(/(\d+(?:\.\d+)?)\s*(?:磅|lb|lbs)/i);
+  if (match) {
+    const weight = parseFloat(match[1]) * 0.454;
+    if (weight >= 0.1 && weight <= 200) return Math.round(weight * 100) / 100;
+  }
+
+  // 體重 + 數字（無單位，預設公斤）
+  match = input.match(/體重[是為]?\s*(\d+(?:\.\d+)?)/);
+  if (match) {
+    const weight = parseFloat(match[1]);
+    if (weight >= 0.1 && weight <= 200) return weight;
+  }
+
+  // 量 + 數字
+  match = input.match(/量[了]?\s*(\d+(?:\.\d+)?)\s*(?:公斤|kg)?/i);
+  if (match) {
+    const weight = parseFloat(match[1]);
+    if (weight >= 0.1 && weight <= 200) return weight;
+  }
+
+  return undefined;
 }
 
 // 健康分析（付費功能）
