@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { Plus, Calendar, RefreshCw } from 'lucide-react';
+import { Plus, Calendar, RefreshCw, Bell, ChevronRight, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DiaryCard } from '@/components/diary/diary-card';
@@ -15,9 +15,18 @@ import { api } from '@/hooks/use-api';
 import { formatDate, getSpeciesEmoji, getPetAge } from '@/lib/utils';
 import type { Diary, Pet } from '@/types';
 
+interface Reminder {
+  id: string;
+  title: string;
+  category: string;
+  remindAt: string;
+  pet?: { name: string } | null;
+}
+
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [upcomingReminders, setUpcomingReminders] = useState<Reminder[]>([]);
   const hasFetched = useRef(false);
   const user = useUserStore((state) => state.user);
   const pets = useUserStore((state) => state.pets);
@@ -37,10 +46,28 @@ export default function HomePage() {
 
       setIsLoading(true);
 
-      // Fetch diaries
-      const result = await api.diaries.list({ petId: currentPetId, limit: 20 });
-      if (result.success && result.data) {
-        setDiaries(result.data as Diary[]);
+      // Fetch diaries and reminders in parallel
+      const [diariesResult, remindersResult] = await Promise.all([
+        api.diaries.list({ petId: currentPetId, limit: 20 }),
+        api.reminders.list(),
+      ]);
+
+      if (diariesResult.success && diariesResult.data) {
+        setDiaries(diariesResult.data as Diary[]);
+      }
+
+      if (remindersResult.success && remindersResult.data) {
+        // Filter upcoming reminders (next 7 days)
+        const now = new Date();
+        const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const upcoming = (remindersResult.data as Reminder[])
+          .filter(r => {
+            const remindAt = new Date(r.remindAt);
+            return remindAt >= now && remindAt <= weekLater;
+          })
+          .sort((a, b) => new Date(a.remindAt).getTime() - new Date(b.remindAt).getTime())
+          .slice(0, 3);
+        setUpcomingReminders(upcoming);
       }
 
       setIsLoading(false);
@@ -67,6 +94,21 @@ export default function HomePage() {
       setDiaries(result.data as Diary[]);
     }
 
+    // Fetch reminders
+    const remindersResult = await api.reminders.list();
+    if (remindersResult.success && remindersResult.data) {
+      const now = new Date();
+      const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const upcoming = (remindersResult.data as Reminder[])
+        .filter(r => {
+          const remindAt = new Date(r.remindAt);
+          return remindAt >= now && remindAt <= weekLater;
+        })
+        .sort((a, b) => new Date(a.remindAt).getTime() - new Date(b.remindAt).getTime())
+        .slice(0, 3);
+      setUpcomingReminders(upcoming);
+    }
+
     setIsRefreshing(false);
   };
 
@@ -89,6 +131,33 @@ export default function HomePage() {
     );
   }
 
+  const getCategoryEmoji = (category: string) => {
+    const emojis: Record<string, string> = {
+      VACCINE: '💉',
+      DEWORMING: '🐛',
+      GROOMING: '✨',
+      CHECKUP: '🏥',
+      MEDICATION: '💊',
+      FOOD: '🍽️',
+      OTHER: '📝',
+    };
+    return emojis[category] || '🔔';
+  };
+
+  const formatReminderTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return `今天 ${date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays === 1) {
+      return `明天 ${date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
+    }
+  };
+
   return (
     <div className="mx-auto max-w-lg p-4">
       {/* Header */}
@@ -106,7 +175,7 @@ export default function HomePage() {
 
       {/* Current Pet Card */}
       {currentPet && (
-        <Card className="mb-6">
+        <Card className="mb-4">
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-3xl">
               {currentPet.photoUrl ? (
@@ -127,7 +196,7 @@ export default function HomePage() {
               </p>
               {currentPet.weight && (
                 <p className="text-sm text-primary font-medium">
-                  體重：{currentPet.weight} kg
+                  體重：{Number(currentPet.weight)} kg
                 </p>
               )}
             </div>
@@ -144,10 +213,79 @@ export default function HomePage() {
         </Card>
       )}
 
-      {/* Quick Input */}
-      <div className="mb-6">
-        <DiaryInput />
+      {/* Quick Actions */}
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <Link href="/reminders">
+          <Card className="cursor-pointer transition-colors hover:bg-accent">
+            <CardContent className="flex items-center gap-3 p-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                <Bell className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">提醒設定</p>
+                <p className="text-xs text-muted-foreground truncate">疫苗、驅蟲、看診</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/stats">
+          <Card className="cursor-pointer transition-colors hover:bg-accent">
+            <CardContent className="flex items-center gap-3 p-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                <BarChart3 className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">統計分析</p>
+                <p className="text-xs text-muted-foreground truncate">體重趨勢、健康</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
+
+      {/* Upcoming Reminders */}
+      {upcomingReminders.length > 0 && (
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Bell className="h-4 w-4" />
+              近期提醒
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {upcomingReminders.map((reminder) => (
+              <div
+                key={reminder.id}
+                className="flex items-center gap-3 rounded-lg bg-muted/50 p-2"
+              >
+                <span className="text-lg">{getCategoryEmoji(reminder.category)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{reminder.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {reminder.pet?.name && `${reminder.pet.name} · `}
+                    {formatReminderTime(reminder.remindAt)}
+                  </p>
+                </div>
+              </div>
+            ))}
+            <Link href="/reminders" className="block">
+              <Button variant="ghost" size="sm" className="w-full text-primary">
+                查看全部提醒 <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Input */}
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">快速記錄</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DiaryInput />
+        </CardContent>
+      </Card>
 
       {/* Today's Records */}
       <Card>
@@ -164,7 +302,7 @@ export default function HomePage() {
           {isLoading ? (
             <ContentLoading />
           ) : todayDiaries.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
+            <div className="py-6 text-center text-muted-foreground">
               <p>今天還沒有記錄</p>
               <p className="text-sm">用上方的輸入框開始記錄吧！</p>
             </div>
@@ -178,7 +316,7 @@ export default function HomePage() {
           <div className="pt-2 text-center">
             <Link href="/diary/history">
               <Button variant="ghost" size="sm" className="text-primary">
-                查看全部記錄 →
+                查看全部記錄 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>
           </div>

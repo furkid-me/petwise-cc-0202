@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, PawPrint, PlusCircle, BarChart3, Settings } from 'lucide-react';
+import { Home, PawPrint, Bell, BarChart3, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -17,9 +17,9 @@ const navItems = [
     icon: PawPrint,
   },
   {
-    href: '/diary/new',
-    label: '記錄',
-    icon: PlusCircle,
+    href: '/reminders',
+    label: '提醒',
+    icon: Bell,
     highlight: true,
   },
   {
