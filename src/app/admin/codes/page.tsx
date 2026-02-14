@@ -91,16 +91,29 @@ export default function AdminCodesPage() {
   };
 
   const handleLogin = async () => {
-    const res = await fetch('/api/admin/codes', {
-      headers: {
-        Authorization: `Bearer ${password}`,
-      },
-    });
-    if (res.ok) {
-      setIsAuthenticated(true);
-      fetchCodes();
-    } else {
-      alert('密碼錯誤');
+    try {
+      const res = await fetch('/api/admin/codes', {
+        headers: {
+          Authorization: `Bearer ${password}`,
+        },
+      });
+      if (res.ok) {
+        setIsAuthenticated(true);
+        fetchCodes();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (data.hint) {
+          alert(data.hint);
+        } else if (res.status === 401) {
+          alert('密碼錯誤');
+        } else if (res.status === 500) {
+          alert('伺服器錯誤，請檢查資料庫連線');
+        } else {
+          alert(`登入失敗 (${res.status})`);
+        }
+      }
+    } catch (error) {
+      alert('網路錯誤，請稍後再試');
     }
   };
 

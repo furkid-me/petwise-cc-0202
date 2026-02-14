@@ -5,18 +5,31 @@ import { nanoid } from 'nanoid';
 // 簡單的管理員密碼驗證（生產環境應使用更安全的方式）
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'petwise-admin-2024';
 
-function checkAdminAuth(request: NextRequest): boolean {
+function checkAdminAuth(request: NextRequest): { valid: boolean; reason?: string } {
   const authHeader = request.headers.get('Authorization');
-  if (!authHeader) return false;
+  if (!authHeader) {
+    return { valid: false, reason: 'missing_header' };
+  }
 
-  const password = authHeader.replace('Bearer ', '');
-  return password === ADMIN_PASSWORD;
+  const password = authHeader.replace('Bearer ', '').trim();
+  const expectedPassword = ADMIN_PASSWORD.trim();
+
+  if (password === expectedPassword) {
+    return { valid: true };
+  }
+
+  return { valid: false, reason: 'password_mismatch' };
 }
 
 // GET /api/admin/codes - 獲取所有兌換碼
 export async function GET(request: NextRequest) {
-  if (!checkAdminAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = checkAdminAuth(request);
+  if (!auth.valid) {
+    return NextResponse.json({
+      error: 'Unauthorized',
+      reason: auth.reason,
+      hint: auth.reason === 'missing_header' ? '缺少授權標頭' : '密碼不正確'
+    }, { status: 401 });
   }
 
   try {
@@ -45,7 +58,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get codes error:', error);
     return NextResponse.json(
-      { error: 'Failed to get codes' },
+      { error: 'Database Error', hint: '資料庫連線失敗，請檢查 DATABASE_URL' },
       { status: 500 }
     );
   }
@@ -53,8 +66,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/admin/codes - 建立新兌換碼
 export async function POST(request: NextRequest) {
-  if (!checkAdminAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = checkAdminAuth(request);
+  if (!auth.valid) {
+    return NextResponse.json({ error: 'Unauthorized', reason: auth.reason }, { status: 401 });
   }
 
   try {
@@ -106,8 +120,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/admin/codes - 停用兌換碼
 export async function DELETE(request: NextRequest) {
-  if (!checkAdminAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = checkAdminAuth(request);
+  if (!auth.valid) {
+    return NextResponse.json({ error: 'Unauthorized', reason: auth.reason }, { status: 401 });
   }
 
   try {
