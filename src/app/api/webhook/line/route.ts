@@ -7,8 +7,9 @@ import {
   buildDiaryConfirmMessage,
   buildNoPetMessage,
   buildTodaySummaryMessage,
+  getLineImageContent,
 } from '@/lib/line-messaging';
-import { parseDiaryInput } from '@/lib/ai-parser';
+import { parseDiaryInput, analyzeImageWithAI } from '@/lib/ai-parser';
 
 interface LineEvent {
   type: string;
@@ -42,7 +43,17 @@ interface UserWithPets {
 }
 
 // 暫存用戶的待處理訊息（用於 Quick Reply 選擇寵物後繼續處理）
-const pendingMessages = new Map<string, { text: string; parsedEntries: unknown[]; extractedWeight?: number }>();
+const pendingMessages = new Map<string, {
+  text: string;
+  parsedEntries: unknown[];
+  extractedWeight?: number;
+  isFromImage?: boolean;
+  imageAnalysis?: {
+    petType?: string;
+    activity?: string;
+    healthObservations?: string[];
+  };
+}>();
 
 // Verify LINE signature
 function verifySignature(body: string, signature: string): boolean {
@@ -114,6 +125,8 @@ async function handleEvent(event: LineEvent) {
     case 'message':
       if (event.message?.type === 'text' && event.message.text) {
         await handleTextMessage(userId, event.message.text, user as UserWithPets | null);
+      } else if (event.message?.type === 'image' && event.message.id) {
+        await handleImageMessage(userId, event.message.id, user as UserWithPets | null);
       }
       break;
 
@@ -327,6 +340,156 @@ async function handleTextMessage(
   }
 }
 
+async function handleImageMessage(
+  lineUserId: string,
+  messageId: string,
+  user: UserWithPets | null
+) {
+  console.log(`[LINE] handleImageMessage: userId=${lineUserId}, messageId=${messageId}`);
+
+  // 檢查用戶是否有寵物
+  if (!user || !user.pets || user.pets.length === 0) {
+    console.log('[LINE] User has no pets');
+    await sendLineMessage(lineUserId, buildNoPetMessage());
+    return;
+  }
+
+  // 發送正在處理的提示
+  await sendLineMessage(lineUserId, {
+    type: 'text',
+    text: '📷 正在分析照片...',
+  });
+
+  try {
+    // 下載圖片
+    const imageData = await getLineImageContent(messageId);
+    if (!imageData) {
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: '無法下載圖片，請稍後再試 😅',
+      });
+      return;
+    }
+
+    // 使用 AI 分析圖片
+    console.log('[LINE] Analyzing image with AI...');
+    const analysis = await analyzeImageWithAI(imageData.base64, imageData.contentType);
+    console.log('[LINE] Image analysis result:', JSON.stringify(analysis).substring(0, 200));
+
+    // 處理錯誤情況
+    if (analysis.error === 'not_pet_photo') {
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: '這張照片好像不是寵物照片呢 🤔\n請傳送毛小孩的照片，我會幫你記錄！',
+      });
+      return;
+    }
+
+    if (analysis.error === 'unclear_image') {
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: '照片有點模糊，無法辨識 😅\n請傳送更清晰的照片！',
+      });
+      return;
+    }
+
+    if (analysis.entries.length === 0) {
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: '無法從照片中辨識到有意義的內容 😅',
+      });
+      return;
+    }
+
+    // 決定要記錄給哪隻寵物
+    let targetPet: Pet | null = null;
+
+    if (user.pets.length === 1) {
+      // 只有一隻寵物，直接使用
+      targetPet = user.pets[0];
+    } else {
+      // 多隻寵物，發送 Quick Reply 讓用戶選擇
+      pendingMessages.set(lineUserId, {
+        text: analysis.summary || '照片記錄',
+        parsedEntries: analysis.entries,
+        isFromImage: true,
+        imageAnalysis: {
+          petType: analysis.petType,
+          activity: analysis.activity,
+          healthObservations: analysis.healthObservations,
+        },
+      });
+
+      // 建立選擇寵物的訊息，顯示分析結果
+      let previewText = '📷 照片分析完成！\n\n';
+      if (analysis.petType) {
+        previewText += `🐾 辨識到：${analysis.petType}`;
+        if (analysis.breed) {
+          previewText += `（${analysis.breed}）`;
+        }
+        previewText += '\n';
+      }
+      if (analysis.activity) {
+        previewText += `📝 ${analysis.activity}\n`;
+      }
+      previewText += '\n要記錄給哪隻寵物？';
+
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: previewText,
+        quickReply: {
+          items: [
+            ...user.pets.slice(0, 10).map(pet => ({
+              type: 'action' as const,
+              action: {
+                type: 'postback' as const,
+                label: pet.name.slice(0, 20),
+                data: `action=select_pet&petId=${pet.id}`,
+                displayText: pet.name,
+              },
+            })),
+            {
+              type: 'action' as const,
+              action: {
+                type: 'postback' as const,
+                label: '取消',
+                data: 'action=cancel_diary',
+                displayText: '取消',
+              },
+            },
+          ],
+        },
+      });
+      return;
+    }
+
+    // 建立健康警告（如果有健康觀察）
+    let healthWarning: string | undefined;
+    if (analysis.healthObservations && analysis.healthObservations.length > 0) {
+      healthWarning = analysis.healthObservations.join('；');
+    }
+
+    // 有確定的寵物，建立日記
+    await createDiaryAndReply(
+      lineUserId,
+      user.id,
+      targetPet,
+      `📷 ${analysis.summary || '照片記錄'}`,
+      analysis.entries,
+      healthWarning,
+      undefined, // extractedWeight
+      true // isFromImage
+    );
+
+  } catch (error) {
+    console.error('[LINE] Failed to analyze image:', error);
+    await sendLineMessage(lineUserId, {
+      type: 'text',
+      text: '圖片分析失敗，請稍後再試 😅',
+    });
+  }
+}
+
 async function createDiaryAndReply(
   lineUserId: string,
   userId: string,
@@ -334,7 +497,8 @@ async function createDiaryAndReply(
   rawInput: string,
   entries: unknown[],
   healthWarning?: string,
-  extractedWeight?: number
+  extractedWeight?: number,
+  isFromImage?: boolean
 ) {
   console.log(`[LINE] createDiaryAndReply: pet=${pet.name}, entries=${entries.length}`);
 
@@ -405,6 +569,7 @@ async function createDiaryAndReply(
     weightUpdated,
     newWeight: extractedWeight,
     healthWarning,
+    isFromImage,
   });
 
   const sent = await sendLineMessage(lineUserId, flexMessage);
@@ -444,6 +609,12 @@ async function handlePostback(
         return;
       }
 
+      // 建立健康警告（如果有圖片健康觀察）
+      let healthWarning: string | undefined;
+      if (pending.isFromImage && pending.imageAnalysis?.healthObservations?.length) {
+        healthWarning = pending.imageAnalysis.healthObservations.join('；');
+      }
+
       // 建立日記
       await createDiaryAndReply(
         lineUserId,
@@ -451,8 +622,9 @@ async function handlePostback(
         pet,
         pending.text,
         pending.parsedEntries,
-        undefined,
-        pending.extractedWeight
+        healthWarning,
+        pending.extractedWeight,
+        pending.isFromImage
       );
 
       pendingMessages.delete(lineUserId);

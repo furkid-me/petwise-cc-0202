@@ -440,6 +440,138 @@ function extractWeight(input: string): number | undefined {
   return undefined;
 }
 
+// 圖片分析提示詞
+const IMAGE_ANALYSIS_PROMPT = `你是專業的寵物照片分析助手。請分析這張寵物照片，提供以下資訊：
+
+## 任務
+分析照片中的寵物，辨識活動、狀態、可能的健康觀察。
+
+## 分類規則
+**FOOD 飲食**：正在吃東西、喝水、食物相關
+**HEALTH 健康**：排泄物、體態、精神狀態、可見症狀
+**ACTIVITY 活動**：玩耍、睡覺、散步、運動
+**GROOMING 美容**：洗澡後、梳理後、美容相關
+**BEHAVIOR 行為**：特殊表情、姿勢、與人互動
+**OTHER 其他**：無法明確歸類
+
+## 健康觀察重點
+- 眼睛是否有異常分泌物
+- 皮膚/毛髮狀況
+- 體態（過瘦/過胖）
+- 精神狀態
+- 明顯傷口或異常
+
+## 輸出格式（JSON）
+{
+  "petType": "狗/貓/其他",
+  "breed": "可辨識的品種或null",
+  "activity": "正在做什麼",
+  "entries": [
+    {
+      "category": "ACTIVITY",
+      "content": "描述照片中的活動或狀態",
+      "details": {},
+      "mood": 4
+    }
+  ],
+  "healthObservations": ["觀察到的健康相關描述"],
+  "summary": "簡短總結這張照片"
+}
+
+## 注意事項
+- mood: 1-5分（從照片判斷寵物情緒/狀態）
+- 如果無法辨識是寵物照片，回傳 {"error": "not_pet_photo"}
+- 如果照片模糊無法分析，回傳 {"error": "unclear_image"}
+- 保持客觀描述，不要過度解讀`;
+
+export interface ImageAnalysisResult {
+  petType?: string;
+  breed?: string;
+  activity?: string;
+  entries: ParsedDiaryEntry[];
+  healthObservations?: string[];
+  summary: string;
+  error?: string;
+}
+
+/**
+ * 使用 AI 視覺分析寵物照片
+ */
+export async function analyzeImageWithAI(
+  imageBase64: string,
+  contentType: string = 'image/jpeg'
+): Promise<ImageAnalysisResult> {
+  if (!process.env.OPENAI_API_KEY) {
+    console.log('No OpenAI API key, returning fallback for image');
+    return {
+      entries: [{
+        category: 'OTHER',
+        content: '收到一張照片',
+        details: { source: 'image' },
+      }],
+      summary: '收到一張照片（AI 分析功能未啟用）',
+    };
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o', // GPT-4 Vision
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: IMAGE_ANALYSIS_PROMPT },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${contentType};base64,${imageBase64}`,
+                detail: 'low', // 使用低解析度減少成本
+              },
+            },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: 800,
+      temperature: 0.3,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from AI');
+    }
+
+    const result = JSON.parse(content) as ImageAnalysisResult;
+
+    // 處理錯誤情況
+    if (result.error) {
+      return result;
+    }
+
+    // 確保有 entries
+    if (!result.entries || result.entries.length === 0) {
+      result.entries = [{
+        category: 'OTHER',
+        content: result.summary || '收到一張照片',
+        details: { source: 'image' },
+      }];
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Image analysis error:', error);
+    return {
+      entries: [{
+        category: 'OTHER',
+        content: '收到一張照片',
+        details: { source: 'image' },
+      }],
+      summary: '圖片分析失敗',
+      error: 'analysis_failed',
+    };
+  }
+}
+
 // 健康分析（付費功能）
 export async function analyzeHealth(
   petId: string,

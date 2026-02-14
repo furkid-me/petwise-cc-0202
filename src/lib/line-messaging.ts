@@ -57,6 +57,43 @@ interface FlexComponent {
 type LineMessage = TextMessage | FlexMessage;
 
 const LINE_MESSAGING_API = 'https://api.line.me/v2/bot/message';
+const LINE_DATA_API = 'https://api-data.line.me/v2/bot/message';
+
+/**
+ * 從 LINE 下載圖片內容
+ * @param messageId LINE 圖片訊息 ID
+ * @returns Base64 編碼的圖片資料
+ */
+export async function getLineImageContent(messageId: string): Promise<{ base64: string; contentType: string } | null> {
+  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelAccessToken) {
+    console.error('LINE_CHANNEL_ACCESS_TOKEN is not set');
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${LINE_DATA_API}/${messageId}/content`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${channelAccessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('Failed to get LINE image:', response.status);
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+    return { base64, contentType };
+  } catch (error) {
+    console.error('Error downloading LINE image:', error);
+    return null;
+  }
+}
 
 // 取得 LIFF URL
 function getLiffUrl(path: string = ''): string {
@@ -201,6 +238,7 @@ export function buildDiaryConfirmMessage(
     weightUpdated?: boolean;
     newWeight?: number;
     healthWarning?: string;
+    isFromImage?: boolean;
   }
 ): FlexMessage {
   const entryContents: FlexComponent[] = entries.map((entry) => ({
@@ -225,6 +263,8 @@ export function buildDiaryConfirmMessage(
     ],
   }));
 
+  const sourceLabel = options?.isFromImage ? '照片記錄' : '已記錄';
+
   const bodyContents: FlexComponent[] = [
     {
       type: 'box',
@@ -232,7 +272,7 @@ export function buildDiaryConfirmMessage(
       contents: [
         {
           type: 'text',
-          text: '✅',
+          text: options?.isFromImage ? '📷' : '✅',
           size: 'xl',
           flex: 0,
         },
@@ -244,7 +284,7 @@ export function buildDiaryConfirmMessage(
           contents: [
             {
               type: 'text',
-              text: '已記錄',
+              text: sourceLabel,
               size: 'xs',
               color: '#10b981',
             },
@@ -325,9 +365,11 @@ export function buildDiaryConfirmMessage(
     });
   }
 
+  const altTextPrefix = options?.isFromImage ? '📷 照片記錄' : '已記錄';
+
   return {
     type: 'flex',
-    altText: `已為【${petName}】記錄 ${entries.length} 則日記`,
+    altText: `${altTextPrefix}【${petName}】${entries.length} 則日記`,
     contents: {
       type: 'bubble',
       body: {
