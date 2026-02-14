@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useUserStore } from '@/stores/user-store';
-import liff from '@line/liff';
+import { getAccessToken } from '@/lib/liff';
 import type { UserGender, User } from '@/types';
 
 // 台灣縣市區資料
@@ -86,7 +86,7 @@ export default function RedeemPage() {
 
     try {
       // 從 LIFF 取得 access token
-      const accessToken = liff.getAccessToken();
+      const accessToken = getAccessToken();
       if (!accessToken) {
         setError('無法取得 LINE 認證，請重新登入');
         setIsSubmitting(false);
