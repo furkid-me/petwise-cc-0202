@@ -52,9 +52,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 查找兌換碼
-    const redemptionCode = await prisma.redemptionCode.findUnique({
-      where: { code: code.toUpperCase().trim() },
-    });
+    let redemptionCode;
+    try {
+      redemptionCode = await prisma.redemptionCode.findUnique({
+        where: { code: code.toUpperCase().trim() },
+      });
+    } catch (dbError) {
+      console.error('Database error finding redemption code:', dbError);
+      return NextResponse.json({ error: '查詢兌換碼失敗，請稍後再試' }, { status: 500 });
+    }
 
     if (!redemptionCode) {
       return NextResponse.json(
@@ -96,12 +102,18 @@ export async function POST(request: NextRequest) {
     }
 
     // 檢查用戶是否已經使用過此兌換碼
-    const existingLog = await prisma.redemptionLog.findFirst({
-      where: {
-        userId: user.id,
-        codeId: redemptionCode.id,
-      },
-    });
+    let existingLog;
+    try {
+      existingLog = await prisma.redemptionLog.findFirst({
+        where: {
+          userId: user.id,
+          codeId: redemptionCode.id,
+        },
+      });
+    } catch (dbError) {
+      console.error('Database error checking existing log:', dbError);
+      return NextResponse.json({ error: '檢查兌換記錄失敗，請稍後再試' }, { status: 500 });
+    }
 
     if (existingLog) {
       return NextResponse.json(
@@ -121,43 +133,53 @@ export async function POST(request: NextRequest) {
     periodEnd.setDate(periodEnd.getDate() + redemptionCode.durationDays);
 
     // 執行兌換（使用 transaction）
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // 更新兌換碼使用次數
-      await tx.redemptionCode.update({
-        where: { id: redemptionCode.id },
-        data: { currentUses: { increment: 1 } },
-      });
+    let result;
+    try {
+      result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // 更新兌換碼使用次數
+        await tx.redemptionCode.update({
+          where: { id: redemptionCode.id },
+          data: { currentUses: { increment: 1 } },
+        });
 
-      // 創建兌換記錄
-      await tx.redemptionLog.create({
-        data: {
-          userId: user.id,
-          codeId: redemptionCode.id,
-          plan: redemptionCode.plan,
-          durationDays: redemptionCode.durationDays,
-          periodStart,
-          periodEnd,
-        },
-      });
+        // 創建兌換記錄
+        await tx.redemptionLog.create({
+          data: {
+            userId: user.id,
+            codeId: redemptionCode.id,
+            plan: redemptionCode.plan,
+            durationDays: redemptionCode.durationDays,
+            periodStart,
+            periodEnd,
+          },
+        });
 
-      // 更新用戶訂閱和 CRM 資料
-      const updatedUser = await tx.user.update({
-        where: { id: user.id },
-        data: {
-          subscriptionPlan: redemptionCode.plan,
-          subscriptionStart: periodStart,
-          subscriptionEnd: periodEnd,
-          realName,
-          email,
-          phone,
-          gender,
-          city,
-          district,
-        },
-      });
+        // 更新用戶訂閱和 CRM 資料
+        const updatedUser = await tx.user.update({
+          where: { id: user.id },
+          data: {
+            subscriptionPlan: redemptionCode.plan,
+            subscriptionStart: periodStart,
+            subscriptionEnd: periodEnd,
+            realName,
+            email,
+            phone,
+            gender,
+            city,
+            district,
+          },
+        });
 
-      return updatedUser;
-    });
+        return updatedUser;
+      });
+    } catch (txError) {
+      console.error('Transaction error during redemption:', txError);
+      const errorMessage = txError instanceof Error ? txError.message : 'Unknown error';
+      return NextResponse.json(
+        { error: `兌換交易失敗: ${errorMessage}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
