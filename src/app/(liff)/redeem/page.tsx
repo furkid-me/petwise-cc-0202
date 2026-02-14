@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Gift, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useUserStore } from '@/stores/user-store';
-import { api } from '@/hooks/use-api';
+import liff from '@line/liff';
 import type { UserGender, User } from '@/types';
 
 // 台灣縣市區資料
@@ -85,11 +85,19 @@ export default function RedeemPage() {
     setIsSubmitting(true);
 
     try {
+      // 從 LIFF 取得 access token
+      const accessToken = liff.getAccessToken();
+      if (!accessToken) {
+        setError('無法取得 LINE 認證，請重新登入');
+        setIsSubmitting(false);
+        return;
+      }
+
       const res = await fetch('/api/redeem', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           code: code.trim(),
