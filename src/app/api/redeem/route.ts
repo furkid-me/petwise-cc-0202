@@ -1,14 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { verifyLineToken } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
 
 // POST /api/redeem - 兌換碼使用
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser(request);
+    // 驗證用戶
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: '缺少認證標頭' }, { status: 401 });
+    }
+
+    const accessToken = authHeader.slice(7);
+    const profile = await verifyLineToken(accessToken);
+    if (!profile) {
+      return NextResponse.json({ error: 'LINE 認證失敗，請重新登入' }, { status: 401 });
+    }
+
+    // 查找用戶
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { lineUserId: profile.userId },
+      });
+    } catch (dbError) {
+      console.error('Database error finding user:', dbError);
+      return NextResponse.json({ error: '資料庫連線失敗' }, { status: 500 });
+    }
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: '用戶不存在，請先使用 LINE 登入' }, { status: 401 });
     }
 
     const body = await request.json();
