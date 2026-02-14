@@ -30,6 +30,11 @@ const repeatOptions: { value: RepeatType; label: string }[] = [
   { value: 'YEARLY', label: '每年' },
 ];
 
+const timeOptions = [
+  { value: '08:00', label: '早上 8:00', emoji: '🌅' },
+  { value: '20:00', label: '晚上 8:00', emoji: '🌙' },
+];
+
 export default function NewReminderPage() {
   const router = useRouter();
   const pets = useUserStore((state) => state.pets);
@@ -41,7 +46,7 @@ export default function NewReminderPage() {
     category: 'OTHER' as ReminderCategory,
     petId: pets[0]?.id || '',
     remindAt: '',
-    remindTime: '09:00',
+    remindTime: '08:00',
     repeatType: 'NONE' as RepeatType,
   });
 
@@ -189,29 +194,44 @@ export default function NewReminderPage() {
             <CardTitle className="text-base">提醒時間</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  日期 <span className="text-destructive">*</span>
-                </label>
-                <Input
-                  type="date"
-                  name="remindAt"
-                  value={formData.remindAt}
-                  onChange={handleChange}
-                  min={today}
-                  required
-                />
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                日期 <span className="text-destructive">*</span>
+              </label>
+              <Input
+                type="date"
+                name="remindAt"
+                value={formData.remindAt}
+                onChange={handleChange}
+                min={today}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">通知時段</label>
+              <div className="grid grid-cols-2 gap-2">
+                {timeOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, remindTime: opt.value }))
+                    }
+                    className={`flex items-center justify-center gap-2 rounded-lg border p-3 transition-colors ${
+                      formData.remindTime === opt.value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-muted hover:bg-muted/50'
+                    }`}
+                  >
+                    <span className="text-xl">{opt.emoji}</span>
+                    <span className="text-sm font-medium">{opt.label}</span>
+                  </button>
+                ))}
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">時間</label>
-                <Input
-                  type="time"
-                  name="remindTime"
-                  value={formData.remindTime}
-                  onChange={handleChange}
-                />
-              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                提醒將於所選時段透過 LINE 推播通知
+              </p>
             </div>
 
             <div>
