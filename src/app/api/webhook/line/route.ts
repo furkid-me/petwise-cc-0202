@@ -9,7 +9,7 @@ import {
   buildTodaySummaryMessage,
   getLineImageContent,
 } from '@/lib/line-messaging';
-import { parseDiaryInput, analyzeImageWithAI } from '@/lib/ai-parser';
+import { parseDiaryInput, analyzeImageWithAI, MedicalRecord, FoodInfo } from '@/lib/ai-parser';
 
 interface LineEvent {
   type: string;
@@ -49,11 +49,118 @@ const pendingMessages = new Map<string, {
   extractedWeight?: number;
   isFromImage?: boolean;
   imageAnalysis?: {
+    imageType?: string;
     petType?: string;
     activity?: string;
     healthObservations?: string[];
+    medicalRecord?: MedicalRecord;
+    foodInfo?: FoodInfo;
+    healthWarning?: string;
   };
 }>();
+
+/**
+ * 根據圖片分析結果生成預覽文字
+ */
+function buildImagePreviewText(analysis: {
+  imageType?: string;
+  petType?: string;
+  breed?: string;
+  activity?: string;
+  summary?: string;
+  medicalRecord?: {
+    hospitalName?: string;
+    visitDate?: string;
+    diagnosis?: string;
+    testResults?: Array<{ item: string; value: string; isAbnormal?: boolean }>;
+    vaccineInfo?: { name?: string; brand?: string };
+  };
+  foodInfo?: {
+    brand?: string;
+    productName?: string;
+    flavor?: string;
+  };
+  healthWarning?: string;
+}): string {
+  let text = '';
+
+  switch (analysis.imageType) {
+    case 'medical_document': {
+      text = '📋 健檢/醫療記錄辨識完成！\n\n';
+      const record = analysis.medicalRecord;
+      if (record?.hospitalName) {
+        text += `🏥 ${record.hospitalName}\n`;
+      }
+      if (record?.visitDate) {
+        text += `📅 ${record.visitDate}\n`;
+      }
+      if (record?.diagnosis) {
+        text += `📝 ${record.diagnosis}\n`;
+      }
+      if (record?.vaccineInfo?.name) {
+        text += `💉 疫苗：${record.vaccineInfo.name}`;
+        if (record.vaccineInfo.brand) {
+          text += `（${record.vaccineInfo.brand}）`;
+        }
+        text += '\n';
+      }
+      if (record?.testResults && record.testResults.length > 0) {
+        const abnormalCount = record.testResults.filter(t => t.isAbnormal).length;
+        text += `🔬 檢驗項目：${record.testResults.length} 項`;
+        if (abnormalCount > 0) {
+          text += `（⚠️ ${abnormalCount} 項異常）`;
+        }
+        text += '\n';
+      }
+      if (analysis.healthWarning) {
+        text += `\n⚠️ ${analysis.healthWarning}`;
+      }
+      break;
+    }
+
+    case 'food_package': {
+      text = '🍽️ 飼料/零食辨識完成！\n\n';
+      const food = analysis.foodInfo;
+      if (food?.brand) {
+        text += `🏷️ 品牌：${food.brand}\n`;
+      }
+      if (food?.productName) {
+        text += `📦 產品：${food.productName}\n`;
+      }
+      if (food?.flavor) {
+        text += `✨ 口味：${food.flavor}\n`;
+      }
+      break;
+    }
+
+    case 'receipt': {
+      text = '🧾 收據辨識完成！\n\n';
+      text += `📝 ${analysis.summary || '消費記錄'}\n`;
+      break;
+    }
+
+    case 'pet_photo':
+    default: {
+      text = '📷 照片分析完成！\n\n';
+      if (analysis.petType) {
+        text += `🐾 辨識到：${analysis.petType}`;
+        if (analysis.breed) {
+          text += `（${analysis.breed}）`;
+        }
+        text += '\n';
+      }
+      if (analysis.activity) {
+        text += `📝 ${analysis.activity}\n`;
+      }
+      if (analysis.healthWarning) {
+        text += `\n⚠️ ${analysis.healthWarning}`;
+      }
+      break;
+    }
+  }
+
+  return text.trim();
+}
 
 // Verify LINE signature
 function verifySignature(body: string, signature: string): boolean {
@@ -377,18 +484,18 @@ async function handleImageMessage(
     console.log('[LINE] Image analysis result:', JSON.stringify(analysis).substring(0, 200));
 
     // 處理錯誤情況
-    if (analysis.error === 'not_pet_photo') {
-      await sendLineMessage(lineUserId, {
-        type: 'text',
-        text: '這張照片好像不是寵物照片呢 🤔\n請傳送毛小孩的照片，我會幫你記錄！',
-      });
-      return;
-    }
-
     if (analysis.error === 'unclear_image') {
       await sendLineMessage(lineUserId, {
         type: 'text',
         text: '照片有點模糊，無法辨識 😅\n請傳送更清晰的照片！',
+      });
+      return;
+    }
+
+    if (analysis.error === 'unrecognized') {
+      await sendLineMessage(lineUserId, {
+        type: 'text',
+        text: '無法辨識這張照片的內容 😅\n\n支援的圖片類型：\n🐾 寵物照片\n📋 健檢報告\n🍽️ 飼料/零食包裝\n🧾 消費收據',
       });
       return;
     }
@@ -404,6 +511,9 @@ async function handleImageMessage(
     // 決定要記錄給哪隻寵物
     let targetPet: Pet | null = null;
 
+    // 根據圖片類型生成預覽文字
+    const previewText = buildImagePreviewText(analysis);
+
     if (user.pets.length === 1) {
       // 只有一隻寵物，直接使用
       targetPet = user.pets[0];
@@ -414,29 +524,19 @@ async function handleImageMessage(
         parsedEntries: analysis.entries,
         isFromImage: true,
         imageAnalysis: {
+          imageType: analysis.imageType,
           petType: analysis.petType,
           activity: analysis.activity,
           healthObservations: analysis.healthObservations,
+          medicalRecord: analysis.medicalRecord,
+          foodInfo: analysis.foodInfo,
+          healthWarning: analysis.healthWarning,
         },
       });
 
-      // 建立選擇寵物的訊息，顯示分析結果
-      let previewText = '📷 照片分析完成！\n\n';
-      if (analysis.petType) {
-        previewText += `🐾 辨識到：${analysis.petType}`;
-        if (analysis.breed) {
-          previewText += `（${analysis.breed}）`;
-        }
-        previewText += '\n';
-      }
-      if (analysis.activity) {
-        previewText += `📝 ${analysis.activity}\n`;
-      }
-      previewText += '\n要記錄給哪隻寵物？';
-
       await sendLineMessage(lineUserId, {
         type: 'text',
-        text: previewText,
+        text: previewText + '\n\n要記錄給哪隻寵物？',
         quickReply: {
           items: [
             ...user.pets.slice(0, 10).map(pet => ({
@@ -463,9 +563,9 @@ async function handleImageMessage(
       return;
     }
 
-    // 建立健康警告（如果有健康觀察）
-    let healthWarning: string | undefined;
-    if (analysis.healthObservations && analysis.healthObservations.length > 0) {
+    // 建立健康警告
+    let healthWarning = analysis.healthWarning;
+    if (!healthWarning && analysis.healthObservations && analysis.healthObservations.length > 0) {
       healthWarning = analysis.healthObservations.join('；');
     }
 
@@ -478,7 +578,8 @@ async function handleImageMessage(
       analysis.entries,
       healthWarning,
       undefined, // extractedWeight
-      true // isFromImage
+      true, // isFromImage
+      analysis.imageType // imageType
     );
 
   } catch (error) {
@@ -498,7 +599,8 @@ async function createDiaryAndReply(
   entries: unknown[],
   healthWarning?: string,
   extractedWeight?: number,
-  isFromImage?: boolean
+  isFromImage?: boolean,
+  imageType?: string
 ) {
   console.log(`[LINE] createDiaryAndReply: pet=${pet.name}, entries=${entries.length}`);
 
@@ -570,6 +672,7 @@ async function createDiaryAndReply(
     newWeight: extractedWeight,
     healthWarning,
     isFromImage,
+    imageType: imageType as 'pet_photo' | 'medical_document' | 'food_package' | 'receipt' | 'other' | undefined,
   });
 
   const sent = await sendLineMessage(lineUserId, flexMessage);
@@ -609,9 +712,9 @@ async function handlePostback(
         return;
       }
 
-      // 建立健康警告（如果有圖片健康觀察）
-      let healthWarning: string | undefined;
-      if (pending.isFromImage && pending.imageAnalysis?.healthObservations?.length) {
+      // 建立健康警告（如果有圖片健康觀察或分析結果中有警告）
+      let healthWarning: string | undefined = pending.imageAnalysis?.healthWarning;
+      if (!healthWarning && pending.isFromImage && pending.imageAnalysis?.healthObservations?.length) {
         healthWarning = pending.imageAnalysis.healthObservations.join('；');
       }
 
@@ -624,7 +727,8 @@ async function handlePostback(
         pending.parsedEntries,
         healthWarning,
         pending.extractedWeight,
-        pending.isFromImage
+        pending.isFromImage,
+        pending.imageAnalysis?.imageType
       );
 
       pendingMessages.delete(lineUserId);

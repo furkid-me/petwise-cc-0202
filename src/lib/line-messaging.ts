@@ -239,6 +239,7 @@ export function buildDiaryConfirmMessage(
     newWeight?: number;
     healthWarning?: string;
     isFromImage?: boolean;
+    imageType?: 'pet_photo' | 'medical_document' | 'food_package' | 'receipt' | 'other';
   }
 ): FlexMessage {
   const entryContents: FlexComponent[] = entries.map((entry) => ({
@@ -263,7 +264,17 @@ export function buildDiaryConfirmMessage(
     ],
   }));
 
-  const sourceLabel = options?.isFromImage ? '照片記錄' : '已記錄';
+  // 根據圖片類型顯示不同的標籤和圖示
+  const imageTypeConfig: Record<string, { emoji: string; label: string }> = {
+    'medical_document': { emoji: '📋', label: '健檢記錄' },
+    'food_package': { emoji: '🍽️', label: '飼料記錄' },
+    'receipt': { emoji: '🧾', label: '消費記錄' },
+    'pet_photo': { emoji: '📷', label: '照片記錄' },
+  };
+
+  const typeConfig = options?.imageType ? imageTypeConfig[options.imageType] : null;
+  const sourceEmoji = options?.isFromImage ? (typeConfig?.emoji || '📷') : '✅';
+  const sourceLabel = options?.isFromImage ? (typeConfig?.label || '照片記錄') : '已記錄';
 
   const bodyContents: FlexComponent[] = [
     {
@@ -272,7 +283,7 @@ export function buildDiaryConfirmMessage(
       contents: [
         {
           type: 'text',
-          text: options?.isFromImage ? '📷' : '✅',
+          text: sourceEmoji,
           size: 'xl',
           flex: 0,
         },

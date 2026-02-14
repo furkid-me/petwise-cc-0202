@@ -440,62 +440,141 @@ function extractWeight(input: string): number | undefined {
   return undefined;
 }
 
-// 圖片分析提示詞
-const IMAGE_ANALYSIS_PROMPT = `你是專業的寵物照片分析助手。請分析這張寵物照片，提供以下資訊：
+// 圖片分析提示詞（支援多種圖片類型）
+const IMAGE_ANALYSIS_PROMPT = `你是專業的寵物照片與文件分析助手。請分析這張圖片，判斷類型並提取相關資訊。
 
-## 任務
-分析照片中的寵物，辨識活動、狀態、可能的健康觀察。
+## 第一步：判斷圖片類型
+1. **pet_photo** - 寵物照片（有寵物出現）
+2. **medical_document** - 醫療文件（健檢報告、診斷證明、病歷、處方籤、疫苗證明）
+3. **food_package** - 飼料/零食包裝（寵物食品、罐頭、零食袋）
+4. **receipt** - 收據/發票（獸醫院、寵物店消費）
+5. **other** - 其他無法辨識
 
-## 分類規則
-**FOOD 飲食**：正在吃東西、喝水、食物相關
-**HEALTH 健康**：排泄物、體態、精神狀態、可見症狀
-**ACTIVITY 活動**：玩耍、睡覺、散步、運動
-**GROOMING 美容**：洗澡後、梳理後、美容相關
-**BEHAVIOR 行為**：特殊表情、姿勢、與人互動
-**OTHER 其他**：無法明確歸類
+## 根據類型分析
 
-## 健康觀察重點
-- 眼睛是否有異常分泌物
-- 皮膚/毛髮狀況
-- 體態（過瘦/過胖）
-- 精神狀態
-- 明顯傷口或異常
+### pet_photo 寵物照片
+- 辨識寵物類型、品種
+- 描述活動狀態
+- 觀察健康狀況（眼睛、皮膚、體態）
+
+### medical_document 醫療文件
+- **必須使用 OCR 讀取所有文字**
+- 提取：醫院名稱、就診日期、診斷內容、檢驗數值、醫囑建議
+- 識別異常指標（標記紅字、超標數值）
+- 疫苗/驅蟲記錄：品牌、批號、下次施打日期
+
+### food_package 飼料/零食包裝
+- **必須使用 OCR 讀取包裝文字**
+- 提取：品牌名稱、產品名稱、口味、重量規格
+- 識別：適用寵物類型、主要成分（如有標示）
+
+### receipt 收據/發票
+- **必須使用 OCR 讀取**
+- 提取：商店名稱、日期、消費項目、金額
 
 ## 輸出格式（JSON）
 {
-  "petType": "狗/貓/其他",
-  "breed": "可辨識的品種或null",
-  "activity": "正在做什麼",
+  "imageType": "pet_photo|medical_document|food_package|receipt|other",
+  "petType": "狗/貓/其他（如可辨識）",
+  "breed": "品種或null",
+  "activity": "活動描述（寵物照片用）",
+
+  "ocrText": "完整 OCR 文字內容",
+
+  "medicalRecord": {
+    "hospitalName": "醫院名稱",
+    "visitDate": "就診日期 YYYY-MM-DD",
+    "diagnosis": "診斷內容",
+    "testResults": [
+      {"item": "檢驗項目", "value": "數值", "unit": "單位", "isAbnormal": true/false, "reference": "參考範圍"}
+    ],
+    "medications": ["處方藥物"],
+    "doctorNotes": "醫囑建議",
+    "vaccineInfo": {"name": "疫苗名稱", "brand": "品牌", "nextDate": "下次日期"},
+    "cost": "費用金額"
+  },
+
+  "foodInfo": {
+    "brand": "品牌名稱",
+    "productName": "產品名稱",
+    "flavor": "口味",
+    "weight": "重量規格",
+    "petType": "適用寵物",
+    "mainIngredients": ["主要成分"]
+  },
+
   "entries": [
     {
-      "category": "ACTIVITY",
-      "content": "描述照片中的活動或狀態",
+      "category": "MEDICAL|FOOD|HEALTH|ACTIVITY|OTHER",
+      "content": "記錄內容摘要",
       "details": {},
-      "mood": 4
+      "severity": null
     }
   ],
-  "healthObservations": ["觀察到的健康相關描述"],
-  "summary": "簡短總結這張照片"
+  "healthObservations": ["健康相關觀察"],
+  "summary": "簡短總結",
+  "healthWarning": "需要注意的健康警示（如有異常指標）"
 }
 
+## 分類規則
+- 醫療文件 → MEDICAL
+- 飼料/零食 → FOOD
+- 寵物活動照 → ACTIVITY
+- 健康觀察 → HEALTH
+
 ## 注意事項
-- mood: 1-5分（從照片判斷寵物情緒/狀態）
-- 如果無法辨識是寵物照片，回傳 {"error": "not_pet_photo"}
-- 如果照片模糊無法分析，回傳 {"error": "unclear_image"}
-- 保持客觀描述，不要過度解讀`;
+- OCR 時請仔細辨識所有可見文字，包括小字
+- 醫療數值異常（超出參考範圍）要標記 isAbnormal: true
+- 如果完全無法辨識，回傳 {"imageType": "other", "error": "unrecognized"}
+- 圖片模糊無法分析，回傳 {"imageType": "other", "error": "unclear_image"}`;
+
+export interface MedicalRecord {
+  hospitalName?: string;
+  visitDate?: string;
+  diagnosis?: string;
+  testResults?: Array<{
+    item: string;
+    value: string;
+    unit?: string;
+    isAbnormal?: boolean;
+    reference?: string;
+  }>;
+  medications?: string[];
+  doctorNotes?: string;
+  vaccineInfo?: {
+    name?: string;
+    brand?: string;
+    nextDate?: string;
+  };
+  cost?: string;
+}
+
+export interface FoodInfo {
+  brand?: string;
+  productName?: string;
+  flavor?: string;
+  weight?: string;
+  petType?: string;
+  mainIngredients?: string[];
+}
 
 export interface ImageAnalysisResult {
+  imageType?: 'pet_photo' | 'medical_document' | 'food_package' | 'receipt' | 'other';
   petType?: string;
   breed?: string;
   activity?: string;
+  ocrText?: string;
+  medicalRecord?: MedicalRecord;
+  foodInfo?: FoodInfo;
   entries: ParsedDiaryEntry[];
   healthObservations?: string[];
   summary: string;
+  healthWarning?: string;
   error?: string;
 }
 
 /**
- * 使用 AI 視覺分析寵物照片
+ * 使用 AI 視覺分析圖片（支援寵物照片、醫療文件、飼料包裝）
  */
 export async function analyzeImageWithAI(
   imageBase64: string,
@@ -504,6 +583,7 @@ export async function analyzeImageWithAI(
   if (!process.env.OPENAI_API_KEY) {
     console.log('No OpenAI API key, returning fallback for image');
     return {
+      imageType: 'other',
       entries: [{
         category: 'OTHER',
         content: '收到一張照片',
@@ -525,15 +605,15 @@ export async function analyzeImageWithAI(
               type: 'image_url',
               image_url: {
                 url: `data:${contentType};base64,${imageBase64}`,
-                detail: 'low', // 使用低解析度減少成本
+                detail: 'high', // 使用高解析度以支援 OCR
               },
             },
           ],
         },
       ],
       response_format: { type: 'json_object' },
-      max_tokens: 800,
-      temperature: 0.3,
+      max_tokens: 2000, // 增加 token 以容納更多 OCR 文字
+      temperature: 0.2,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -548,19 +628,24 @@ export async function analyzeImageWithAI(
       return result;
     }
 
-    // 確保有 entries
+    // 根據圖片類型生成適當的 entries
     if (!result.entries || result.entries.length === 0) {
-      result.entries = [{
-        category: 'OTHER',
-        content: result.summary || '收到一張照片',
-        details: { source: 'image' },
-      }];
+      result.entries = generateEntriesFromAnalysis(result);
+    }
+
+    // 從醫療報告中提取健康警告
+    if (result.imageType === 'medical_document' && result.medicalRecord?.testResults) {
+      const abnormalResults = result.medicalRecord.testResults.filter(t => t.isAbnormal);
+      if (abnormalResults.length > 0 && !result.healthWarning) {
+        result.healthWarning = `檢驗報告有 ${abnormalResults.length} 項異常指標：${abnormalResults.map(t => t.item).join('、')}`;
+      }
     }
 
     return result;
   } catch (error) {
     console.error('Image analysis error:', error);
     return {
+      imageType: 'other',
       entries: [{
         category: 'OTHER',
         content: '收到一張照片',
@@ -570,6 +655,114 @@ export async function analyzeImageWithAI(
       error: 'analysis_failed',
     };
   }
+}
+
+/**
+ * 根據分析結果生成日記 entries
+ */
+function generateEntriesFromAnalysis(result: ImageAnalysisResult): ParsedDiaryEntry[] {
+  const entries: ParsedDiaryEntry[] = [];
+
+  switch (result.imageType) {
+    case 'medical_document': {
+      const record = result.medicalRecord;
+      let content = '';
+      const details: Record<string, unknown> = { source: 'image', documentType: 'medical' };
+
+      if (record?.diagnosis) {
+        content = record.diagnosis;
+      } else if (record?.vaccineInfo?.name) {
+        content = `施打疫苗：${record.vaccineInfo.name}`;
+        if (record.vaccineInfo.brand) {
+          content += `（${record.vaccineInfo.brand}）`;
+        }
+      } else {
+        content = result.summary || '健檢記錄';
+      }
+
+      if (record?.hospitalName) details.hospital = record.hospitalName;
+      if (record?.visitDate) details.visitDate = record.visitDate;
+      if (record?.testResults) details.testResults = record.testResults;
+      if (record?.medications) details.medications = record.medications;
+      if (record?.doctorNotes) details.doctorNotes = record.doctorNotes;
+      if (record?.vaccineInfo) details.vaccineInfo = record.vaccineInfo;
+      if (record?.cost) details.cost = record.cost;
+      if (result.ocrText) details.ocrText = result.ocrText;
+
+      entries.push({
+        category: 'MEDICAL',
+        content,
+        details,
+        severity: result.medicalRecord?.testResults?.some(t => t.isAbnormal) ? 3 : undefined,
+      });
+      break;
+    }
+
+    case 'food_package': {
+      const food = result.foodInfo;
+      let content = '';
+      const details: Record<string, unknown> = { source: 'image', documentType: 'food_package' };
+
+      if (food?.brand && food?.productName) {
+        content = `${food.brand} ${food.productName}`;
+      } else if (food?.brand) {
+        content = food.brand;
+      } else if (food?.productName) {
+        content = food.productName;
+      } else {
+        content = result.summary || '寵物食品';
+      }
+
+      if (food?.flavor) {
+        content += `（${food.flavor}）`;
+        details.flavor = food.flavor;
+      }
+
+      if (food?.brand) details.brand = food.brand;
+      if (food?.productName) details.productName = food.productName;
+      if (food?.weight) details.weight = food.weight;
+      if (food?.petType) details.petType = food.petType;
+      if (food?.mainIngredients) details.mainIngredients = food.mainIngredients;
+
+      entries.push({
+        category: 'FOOD',
+        subCategory: '飼料/零食',
+        content,
+        details,
+      });
+      break;
+    }
+
+    case 'receipt': {
+      entries.push({
+        category: 'OTHER',
+        subCategory: '消費記錄',
+        content: result.summary || '消費記錄',
+        details: {
+          source: 'image',
+          documentType: 'receipt',
+          ocrText: result.ocrText,
+        },
+      });
+      break;
+    }
+
+    case 'pet_photo':
+    default: {
+      entries.push({
+        category: result.activity ? 'ACTIVITY' : 'OTHER',
+        content: result.activity || result.summary || '收到一張照片',
+        details: {
+          source: 'image',
+          petType: result.petType,
+          breed: result.breed,
+        },
+      });
+      break;
+    }
+  }
+
+  return entries;
 }
 
 // 健康分析（付費功能）
