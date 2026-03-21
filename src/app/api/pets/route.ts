@@ -15,9 +15,11 @@ export async function POST(request: Request) {
 
     if (!name || !type || initialWeightKg === undefined) return NextResponse.json({ error: 'Name, type, and initial weight are required' }, { status: 400 });
 
+    const normalizedGender = gender === 'male' ? 'MALE' : gender === 'female' ? 'FEMALE' : gender === 'unknown' ? 'UNKNOWN' : null;
+
     const newPet = await prisma.pet.create({
       data: {
-        userId: decodedToken.userId, name, type, breed, gender, isNeutered,
+        userId: decodedToken.userId, name, type, breed, gender: normalizedGender, isNeutered,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         chipNumber, initialWeightKg: parseFloat(initialWeightKg),
         dailyKcalTarget: dailyKcalTarget ? parseFloat(dailyKcalTarget) : null,
