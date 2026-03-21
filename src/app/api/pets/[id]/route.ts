@@ -21,7 +21,7 @@ export async function GET(
       },
       include: {
         weightRecords: {
-          orderBy: { recordedAt: 'desc' },
+          orderBy: { recordDate: 'desc' },
           take: 10,
         },
       },
@@ -122,7 +122,9 @@ export async function PUT(
       await prisma.weightRecord.create({
         data: {
           petId: pet.id,
-          weight: parseFloat(weight),
+          userId: user.id,
+          recordDate: new Date(),
+          weightKg: parseFloat(weight),
         },
       });
     }

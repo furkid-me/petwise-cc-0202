@@ -626,7 +626,9 @@ async function createDiaryAndReply(
       await prisma.weightRecord.create({
         data: {
           petId: pet.id,
-          weight: extractedWeight,
+          userId: userId,
+          recordDate: new Date(),
+          weightKg: extractedWeight,
         },
       });
 

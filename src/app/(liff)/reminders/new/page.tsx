@@ -1,272 +1,112 @@
 'use client';
-
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { api } from '@/hooks/use-api';
-import { useUserStore } from '@/stores/user-store';
-import type { ReminderCategory, RepeatType } from '@/types';
+import { useUserStore } from '@/stores/userStore';
 
-const categories: { value: ReminderCategory; label: string; emoji: string }[] = [
-  { value: 'VACCINE', label: '疫苗', emoji: '💉' },
-  { value: 'DEWORMING', label: '驅蟲', emoji: '🐛' },
-  { value: 'GROOMING', label: '美容', emoji: '✨' },
-  { value: 'CHECKUP', label: '健檢', emoji: '🏥' },
-  { value: 'MEDICATION', label: '用藥', emoji: '💊' },
-  { value: 'FOOD', label: '餵食', emoji: '🍽️' },
-  { value: 'OTHER', label: '其他', emoji: '📝' },
+const reminderTypes = [
+  { value: 'vaccine', label: '疫苗' }, { value: 'deworming', label: '驅蟲' },
+  { value: 'vet_visit', label: '回診' }, { value: 'grooming', label: '美容' },
+  { value: 'life', label: '生活提醒' }, { value: 'other', label: '其他' },
 ];
 
-const repeatOptions: { value: RepeatType; label: string }[] = [
-  { value: 'NONE', label: '不重複' },
-  { value: 'DAILY', label: '每天' },
-  { value: 'WEEKLY', label: '每週' },
-  { value: 'MONTHLY', label: '每月' },
-  { value: 'YEARLY', label: '每年' },
-];
-
-const timeOptions = [
-  { value: '08:00', label: '早上 8:00', emoji: '🌅' },
-  { value: '20:00', label: '晚上 8:00', emoji: '🌙' },
+const frequencies = [
+  { value: 'once', label: '單次' }, { value: 'daily', label: '每日' },
+  { value: 'weekly', label: '每週' }, { value: 'monthly', label: '每月' },
+  { value: 'yearly', label: '每年' },
 ];
 
 export default function NewReminderPage() {
   const router = useRouter();
-  const pets = useUserStore((state) => state.pets);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, activePetId } = useUserStore();
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: 'OTHER' as ReminderCategory,
-    petId: pets[0]?.id || '',
-    remindAt: '',
-    remindTime: '08:00',
-    repeatType: 'NONE' as RepeatType,
+    title: '', type: 'vaccine', scheduledDate: '', scheduledTime: '',
+    frequency: 'once', isActive: true, notes: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.title || !formData.remindAt) {
-      alert('請填寫標題和提醒日期');
-      return;
+    setLoading(true); setError(null);
+    const token = localStorage.getItem('petwise_jwt');
+    if (!token || !user?.id || !activePetId) {
+      setError('用戶或寵物未認證，請重新登入。');
+      setLoading(false); router.replace('/'); return;
     }
-
-    setIsSubmitting(true);
-
-    // Combine date and time
-    const remindAt = new Date(`${formData.remindAt}T${formData.remindTime}`);
-
-    const result = await api.reminders.create({
-      title: formData.title,
-      description: formData.description || undefined,
-      category: formData.category,
-      petId: formData.petId || undefined,
-      remindAt: remindAt.toISOString(),
-      repeatType: formData.repeatType,
-    });
-
-    setIsSubmitting(false);
-
-    if (result.success) {
-      router.push('/reminders');
-    } else {
-      alert('建立提醒失敗，請稍後再試');
-    }
+    if (!formData.title.trim()) { setError('提醒標題為必填。'); setLoading(false); return; }
+    if (!formData.scheduledDate) { setError('提醒日期為必填。'); setLoading(false); return; }
+    try {
+      const response = await fetch('/api/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          petId: activePetId, title: formData.title.trim(),
+          type: formData.type, scheduledDate: formData.scheduledDate,
+          scheduledTime: formData.scheduledTime || null,
+          frequency: formData.frequency, isActive: formData.isActive,
+          notes: formData.notes || null,
+        }),
+      });
+      if (response.ok) {
+        router.replace('/reminders');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || '新增提醒失敗。');
+      }
+    } catch (err) {
+      console.error('Create reminder error:', err);
+      setError('新增提醒時發生未知錯誤。');
+    } finally { setLoading(false); }
   };
 
-  // Get minimum date (today)
-  const today = new Date().toISOString().split('T')[0];
-
   return (
-    <div className="mx-auto max-w-lg p-4">
-      {/* Header */}
-      <div className="mb-6 flex items-center gap-4">
-        <Link href="/reminders">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="text-xl font-bold">新增提醒</h1>
-      </div>
-
+    <div className="p-4 max-w-md mx-auto">
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">新增提醒</h1>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Title */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">提醒內容</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                標題 <span className="text-destructive">*</span>
-              </label>
-              <Input
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="例如：狂犬病疫苗接種"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">說明</label>
-              <Textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="備註說明（選填）"
-                rows={2}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Category */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">類別</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-4 gap-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat.value}
-                  type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({ ...prev, category: cat.value }))
-                  }
-                  className={`flex flex-col items-center gap-1 rounded-lg border p-3 transition-colors ${
-                    formData.category === cat.value
-                      ? 'border-primary bg-primary/10'
-                      : 'border-muted hover:bg-muted/50'
-                  }`}
-                >
-                  <span className="text-xl">{cat.emoji}</span>
-                  <span className="text-xs">{cat.label}</span>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pet */}
-        {pets.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">寵物</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <select
-                name="petId"
-                value={formData.petId}
-                onChange={handleChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">不指定寵物</option>
-                {pets.map((pet) => (
-                  <option key={pet.id} value={pet.id}>
-                    {pet.name}
-                  </option>
-                ))}
-              </select>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Date & Time */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">提醒時間</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                日期 <span className="text-destructive">*</span>
-              </label>
-              <Input
-                type="date"
-                name="remindAt"
-                value={formData.remindAt}
-                onChange={handleChange}
-                min={today}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">通知時段</label>
-              <div className="grid grid-cols-2 gap-2">
-                {timeOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, remindTime: opt.value }))
-                    }
-                    className={`flex items-center justify-center gap-2 rounded-lg border p-3 transition-colors ${
-                      formData.remindTime === opt.value
-                        ? 'border-primary bg-primary/10'
-                        : 'border-muted hover:bg-muted/50'
-                    }`}
-                  >
-                    <span className="text-xl">{opt.emoji}</span>
-                    <span className="text-sm font-medium">{opt.label}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                提醒將於所選時段透過 LINE 推播通知
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">重複</label>
-              <select
-                name="repeatType"
-                value={formData.repeatType}
-                onChange={handleChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                {repeatOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Submit */}
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              建立中...
-            </>
-          ) : (
-            '建立提醒'
-          )}
-        </Button>
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700">標題 <span className="text-red-500">*</span></label>
+          <input type="text" id="title" name="title" value={formData.title} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+        </div>
+        <div>
+          <label htmlFor="type" className="block text-sm font-medium text-gray-700">提醒類型 <span className="text-red-500">*</span></label>
+          <select id="type" name="type" value={formData.type} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+            {reminderTypes.map(type => (<option key={type.value} value={type.value}>{type.label}</option>))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700">提醒日期 <span className="text-red-500">*</span></label>
+          <input type="date" id="scheduledDate" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+        </div>
+        <div>
+          <label htmlFor="scheduledTime" className="block text-sm font-medium text-gray-700">提醒時間（選填）</label>
+          <input type="time" id="scheduledTime" name="scheduledTime" value={formData.scheduledTime} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+        </div>
+        <div>
+          <label htmlFor="frequency" className="block text-sm font-medium text-gray-700">提醒頻率 <span className="text-red-500">*</span></label>
+          <select id="frequency" name="frequency" value={formData.frequency} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+            {frequencies.map(freq => (<option key={freq.value} value={freq.value}>{freq.label}</option>))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="notes" className="block text-sm font-medium text-gray-700">備註</label>
+          <textarea id="notes" name="notes" value={formData.notes} onChange={handleChange} rows={2} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+        </div>
+        <div className="flex items-center">
+          <input type="checkbox" id="isActive" name="isActive" checked={formData.isActive} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded" />
+          <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">啟用任務</label>
+        </div>
+        <div className="flex justify-end space-x-2 mt-6">
+          <button type="button" onClick={() => router.back()} className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">取消</button>
+          <button type="submit" className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" disabled={loading}>
+            {loading ? '儲存中...' : '儲存'}
+          </button>
+        </div>
       </form>
     </div>
   );

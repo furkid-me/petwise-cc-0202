@@ -13,11 +13,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const petId = searchParams.get('petId');
     const includeCompleted = searchParams.get('includeCompleted') === 'true';
+    const includeInactive = searchParams.get('includeInactive') === 'true';
 
     const where: Record<string, unknown> = {
       userId: user.id,
-      isActive: true,
     };
+
+    if (!includeInactive) {
+      where.isActive = true;
+    }
 
     if (petId) {
       where.petId = petId;

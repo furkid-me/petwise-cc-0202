@@ -1,55 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyLineToken, getOrCreateUser } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import jwt from 'jsonwebtoken';
 
-export async function POST(request: NextRequest) {
+const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key';
+
+export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { accessToken } = body;
+    const { lineUserId, displayName, profilePictureUrl } = await request.json();
+    if (!lineUserId) return NextResponse.json({ error: 'LINE User ID is required' }, { status: 400 });
 
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'Access token is required' },
-        { status: 400 }
-      );
+    let user = await prisma.user.findUnique({ where: { lineUserId } });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: { lineUserId, displayName, profilePictureUrl, subscriptionPlan: 'FREE' },
+      });
+    } else {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { displayName, profilePictureUrl },
+      });
     }
 
-    // Verify LINE token and get profile
-    const profile = await verifyLineToken(accessToken);
-    if (!profile) {
-      return NextResponse.json(
-        { error: 'Invalid access token' },
-        { status: 401 }
-      );
-    }
-
-    // Get or create user
-    const user = await getOrCreateUser(profile);
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        user: {
-          id: user.id,
-          lineUserId: user.lineUserId,
-          displayName: user.displayName,
-          pictureUrl: user.pictureUrl,
-          email: user.email,
-          subscriptionPlan: user.subscriptionPlan,
-          subscriptionStart: user.subscriptionStart,
-          subscriptionEnd: user.subscriptionEnd,
-          timezone: user.timezone,
-          language: user.language,
-          notifyEnabled: user.notifyEnabled,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-        },
-      },
-    });
+    const token = jwt.sign({ userId: user.id, lineUserId: user.lineUserId }, JWT_SECRET, { expiresIn: '7d' });
+    return NextResponse.json({ token, user }, { status: 200 });
   } catch (error) {
-    console.error('Auth error:', error);
-    return NextResponse.json(
-      { error: 'Authentication failed' },
-      { status: 500 }
-    );
+    console.error('LINE auth API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

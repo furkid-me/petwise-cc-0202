@@ -1,187 +1,147 @@
 'use client';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/stores/userStore';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Plus, Bell, Check, Trash2, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ContentLoading } from '@/components/ui/loading';
-import { PetSelector } from '@/components/liff/pet-selector';
-import { api } from '@/hooks/use-api';
-import { useCurrentPet } from '@/stores/user-store';
-import { formatDate } from '@/lib/utils';
-import type { Reminder } from '@/types';
+interface Reminder {
+  id: string; petId: string; userId: string; title: string;
+  type: string; scheduledDate: string; scheduledTime?: string | null;
+  frequency: string; isActive: boolean; notes: string | null; createdAt: string;
+}
 
-const categoryLabels: Record<string, string> = {
-  VACCINE: '疫苗',
-  DEWORMING: '驅蟲',
-  GROOMING: '美容',
-  CHECKUP: '健檢',
-  MEDICATION: '用藥',
-  FOOD: '餵食',
-  OTHER: '其他',
+const ReminderTypeMap: Record<string, string> = {
+  'vaccine': '疫苗', 'deworming': '驅蟲', 'vet_visit': '回診',
+  'grooming': '美容', 'life': '生活提醒', 'other': '其他',
+  'VACCINE': '疫苗', 'DEWORMING': '驅蟲', 'GROOMING': '美容',
+  'VET_VISIT': '回診', 'MEDICATION': '用藥', 'CHECKUP': '健檢',
 };
 
-const categoryIcons: Record<string, string> = {
-  VACCINE: '💉',
-  DEWORMING: '🐛',
-  GROOMING: '✨',
-  CHECKUP: '🏥',
-  MEDICATION: '💊',
-  FOOD: '🍽️',
-  OTHER: '📝',
+const FrequencyMap: Record<string, string> = {
+  'once': '單次', 'daily': '每日', 'weekly': '每週', 'monthly': '每月', 'yearly': '每年',
+  'NONE': '單次', 'DAILY': '每日', 'WEEKLY': '每週', 'MONTHLY': '每月', 'YEARLY': '每年',
 };
 
 export default function RemindersPage() {
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const currentPet = useCurrentPet();
+  const router = useRouter();
+  const { user, activePetId, pets } = useUserStore();
+  const activePet = useMemo(() => pets.find(p => p.id === activePetId), [pets, activePetId]);
 
-  const fetchReminders = async () => {
-    setIsLoading(true);
-    const result = await api.reminders.list();
-    if (result.success && result.data) {
-      setReminders(result.data as Reminder[]);
-    }
-    setIsLoading(false);
-  };
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchReminders = async () => {
+      if (!user || !activePet) { setLoading(false); return; }
+      setLoading(true); setError(null);
+      const token = localStorage.getItem('petwise_jwt');
+      if (!token) { setError('用戶未認證。'); setLoading(false); return; }
+      try {
+        const url = new URL('/api/reminders', window.location.origin);
+        url.searchParams.append('petId', activePet.id);
+        url.searchParams.append('includeInactive', 'false');
+        const response = await fetch(url.toString(), {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const res = await response.json();
+          const data: Record<string, unknown>[] = Array.isArray(res) ? res : (res.data ?? []);
+          const normalised: Reminder[] = data.map((r) => {
+            const remindAt = r.remindAt as string | undefined;
+            const scheduledDate = (r.scheduledDate as string | undefined) ??
+              (remindAt ? new Date(remindAt).toISOString().split('T')[0] : '');
+            const scheduledTime = (r.scheduledTime as string | null | undefined) ??
+              (remindAt ? new Date(remindAt).toTimeString().slice(0, 5) : null);
+            const rawType = (r.type as string | undefined) ?? (r.category as string | undefined) ?? 'other';
+            const rawFreq = (r.frequency as string | undefined) ?? (r.repeatType as string | undefined) ?? 'NONE';
+            const frequency = rawFreq === 'NONE' ? 'once' : rawFreq.toLowerCase();
+            return {
+              id: r.id as string,
+              petId: (r.petId as string | undefined) ?? '',
+              userId: (r.userId as string | undefined) ?? '',
+              title: r.title as string,
+              type: rawType,
+              scheduledDate,
+              scheduledTime: scheduledTime ?? null,
+              frequency,
+              isActive: r.isActive as boolean,
+              notes: (r.notes as string | null | undefined) ?? (r.description as string | null | undefined) ?? null,
+              createdAt: r.createdAt as string,
+            };
+          });
+          setReminders(normalised);
+        } else {
+          const errorData = await response.json();
+          setError(errorData.error || '載入提醒列表失敗。');
+        }
+      } catch (err) {
+        console.error('Fetch reminders error:', err);
+        setError('載入提醒時發生未知錯誤。');
+      } finally { setLoading(false); }
+    };
     fetchReminders();
-  }, []);
+  }, [user, activePet]);
 
-  const handleComplete = async (id: string) => {
-    const result = await api.reminders.complete(id);
-    if (result.success) {
-      fetchReminders();
-    }
-  };
+  if (!user || !activePet) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>載入中或用戶/寵物未選定...</p>
+      </div>
+    );
+  }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('確定要刪除這個提醒嗎？')) return;
-
-    const result = await api.reminders.delete(id);
-    if (result.success) {
-      setReminders(reminders.filter((r) => r.id !== id));
-    }
-  };
-
-  // Group reminders by date
-  const groupedReminders = reminders.reduce((groups, reminder) => {
-    const date = new Date(reminder.remindAt).toDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(reminder);
-    return groups;
-  }, {} as Record<string, Reminder[]>);
-
-  const sortedDates = Object.keys(groupedReminders).sort(
-    (a, b) => new Date(a).getTime() - new Date(b).getTime()
-  );
+  const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="mx-auto max-w-lg p-4">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold">提醒</h1>
-        <div className="flex items-center gap-2">
-          <PetSelector />
-          <Link href="/reminders/new">
-            <Button size="sm" className="gap-1">
-              <Plus className="h-4 w-4" />
-              新增
-            </Button>
-          </Link>
-        </div>
+    <div className="p-4 max-w-md mx-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-gray-800">{activePet.name} 的提醒</h1>
+        <button
+          onClick={() => router.push('/reminders/new')}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-indigo-700"
+        >
+          + 新增
+        </button>
       </div>
-
-      {isLoading ? (
-        <ContentLoading />
+      {loading ? (
+        <p className="text-gray-500 text-center">載入提醒列表...</p>
+      ) : error ? (
+        <p className="text-red-500 text-center">{error}</p>
       ) : reminders.length === 0 ? (
-        <div className="py-12 text-center">
-          <Bell className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-lg font-semibold">沒有提醒</h2>
-          <p className="mb-6 text-muted-foreground">
-            新增提醒以追蹤疫苗、驅蟲等重要事項
-          </p>
-          <Link href="/reminders/new">
-            <Button>新增提醒</Button>
-          </Link>
-        </div>
+        <p className="text-gray-600 text-center">目前沒有 {activePet.name} 的提醒。</p>
       ) : (
-        <div className="space-y-6">
-          {sortedDates.map((date) => {
-            const isToday = new Date(date).toDateString() === new Date().toDateString();
-            const isPast = new Date(date) < new Date(new Date().toDateString());
-
-            return (
-              <div key={date}>
-                <div className="mb-2 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className={`text-sm font-medium ${isPast ? 'text-destructive' : ''}`}>
-                    {isToday ? '今天' : formatDate(date, 'date')}
-                    {isPast && !isToday && ' (已過期)'}
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {groupedReminders[date].map((reminder) => (
-                    <Card key={reminder.id}>
-                      <CardContent className="flex items-center gap-3 p-4">
-                        <span className="text-2xl">
-                          {categoryIcons[reminder.category] || '📝'}
-                        </span>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{reminder.title}</p>
-                            <Badge variant="outline" className="text-xs">
-                              {categoryLabels[reminder.category] || '其他'}
-                            </Badge>
-                          </div>
-                          {reminder.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">
-                              {reminder.description}
-                            </p>
-                          )}
-                          {reminder.pet && (
-                            <p className="text-sm text-muted-foreground">
-                              {reminder.pet.name}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(reminder.remindAt, 'time')}
-                          </p>
-                        </div>
-
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleComplete(reminder.id)}
-                            title="完成"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(reminder.id)}
-                            title="刪除"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+        <div className="space-y-4">
+          {reminders.map((reminder) => (
+            <div key={reminder.id} className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-bold text-gray-800">{reminder.title}</h3>
+                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                  reminder.scheduledDate < today && reminder.frequency === 'once'
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
+                  {ReminderTypeMap[reminder.type] || reminder.type}
+                </span>
               </div>
-            );
-          })}
+              <p className="text-sm text-gray-600">
+                日期：{reminder.scheduledDate}
+                {reminder.scheduledTime
+                  ? ` 時間：${new Date('1970-01-01T' + reminder.scheduledTime).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}`
+                  : ''}
+              </p>
+              <p className="text-sm text-gray-600">頻率：{FrequencyMap[reminder.frequency] || reminder.frequency}</p>
+              {reminder.notes && <p className="text-sm text-gray-600 mt-1">備註：{reminder.notes}</p>}
+            </div>
+          ))}
         </div>
       )}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 max-w-md mx-auto">
+        <button onClick={() => router.push('/')} className="flex flex-col items-center text-gray-500 text-xs">🏠<span>首頁</span></button>
+        <button onClick={() => router.push('/diet')} className="flex flex-col items-center text-gray-500 text-xs">🍽️<span>飲食</span></button>
+        <button onClick={() => router.push('/weight')} className="flex flex-col items-center text-gray-500 text-xs">⚖️<span>照護</span></button>
+        <button onClick={() => router.push('/reminders')} className="flex flex-col items-center text-indigo-600 text-xs">🔔<span>提醒</span></button>
+        <button onClick={() => router.push('/profile')} className="flex flex-col items-center text-gray-500 text-xs">👤<span>我的</span></button>
+      </nav>
     </div>
   );
 }

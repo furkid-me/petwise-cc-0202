@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
         },
         include: {
           weightRecords: {
-            orderBy: { recordedAt: 'desc' },
+            orderBy: { recordDate: 'desc' },
             take: 30, // 最近 30 筆體重記錄
           },
         },
@@ -130,16 +130,16 @@ export async function GET(request: NextRequest) {
         let weightTrend: 'up' | 'down' | 'stable' = 'stable';
 
         if (weightRecords.length >= 2) {
-          const current = weightRecords[0].weight.toNumber();
-          const previous = weightRecords[1].weight.toNumber();
+          const current = weightRecords[0].weightKg.toNumber();
+          const previous = weightRecords[1].weightKg.toNumber();
           if (current > previous * 1.02) weightTrend = 'up';
           else if (current < previous * 0.98) weightTrend = 'down';
         }
 
         // 體重歷史（用於趨勢圖）
-        weightHistory = weightRecords.map((r: { recordedAt: Date; weight: { toNumber: () => number } }) => ({
-          date: r.recordedAt.toISOString(),
-          weight: r.weight.toNumber(),
+        weightHistory = weightRecords.map((r: { recordDate: Date; weightKg: { toNumber: () => number } }) => ({
+          date: r.recordDate.toISOString(),
+          weight: r.weightKg.toNumber(),
         })).reverse(); // 按時間正序
 
         // Get last medical visit
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
         petSummary = {
           petId: pet.id,
           petName: pet.name,
-          currentWeight: weightRecords[0]?.weight.toNumber() || null,
+          currentWeight: weightRecords[0]?.weightKg.toNumber() || null,
           weightTrend,
           lastVetVisit: lastMedicalDiary?.occurredAt || null,
         };

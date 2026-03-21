@@ -1,156 +1,324 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Sparkles } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DiaryInput } from '@/components/diary/diary-input';
-import { PetSelector } from '@/components/liff/pet-selector';
-import { Badge } from '@/components/ui/badge';
-import { useCurrentPet } from '@/stores/user-store';
-import { getCategoryIcon, getCategoryLabel } from '@/lib/utils';
-import type { DiaryCategory } from '@/types';
+import { useUserStore } from '@/stores/userStore';
+import FoodProductSearch from '@/components/FoodProductSearch';
 
-const categories: { value: DiaryCategory; label: string; icon: string; examples: string[] }[] = [
-  {
-    value: 'FOOD',
-    label: '飲食',
-    icon: '🍽️',
-    examples: ['今天吃了一碗飼料', '喝了很多水', '給了零食'],
-  },
-  {
-    value: 'HEALTH',
-    label: '健康',
-    icon: '❤️',
-    examples: ['大便正常', '精神很好', '體重 8.5kg'],
-  },
-  {
-    value: 'ACTIVITY',
-    label: '活動',
-    icon: '🏃',
-    examples: ['散步了 30 分鐘', '在家玩球', '睡了很久'],
-  },
-  {
-    value: 'MEDICAL',
-    label: '醫療',
-    icon: '🏥',
-    examples: ['打了疫苗', '吃了驅蟲藥', '看了醫生'],
-  },
-  {
-    value: 'GROOMING',
-    label: '美容',
-    icon: '✨',
-    examples: ['洗澡了', '梳毛 15 分鐘', '剪了指甲'],
-  },
-  {
-    value: 'BEHAVIOR',
-    label: '行為',
-    icon: '🐾',
-    examples: ['心情很好', '今天有點黏人', '學會新技能'],
-  },
-];
+interface FoodProduct {
+  id: string;
+  name: string;
+  brand: string;
+  kcalPer100g: number;
+  imageURL: string;
+  type: string;
+}
+
+interface FormData {
+  recordDate: string;
+  recordTime: string;
+  foodProductId: string;
+  foodName: string;
+  foodType: string;
+  amountValue: string;
+  amountUnit: string;
+  totalKcal: string;
+  drankWaterMl: string;
+  specialReaction: string;
+  photoUrl: string;
+  mainIngredients: string[];
+}
 
 export default function NewDiaryPage() {
   const router = useRouter();
-  const currentPet = useCurrentPet();
-  const [selectedCategory, setSelectedCategory] = useState<DiaryCategory | null>(null);
+  const { user, pets, activePetId } = useUserStore();
+  const activePet = pets.find((p) => p.id === activePetId);
 
-  const handleSuccess = () => {
-    router.push('/');
+  const [recordMode, setRecordMode] = useState<'manual' | 'ai-chat'>('manual');
+  const [formData, setFormData] = useState<FormData>({
+    recordDate: new Date().toISOString().split('T')[0],
+    recordTime: new Date().toTimeString().split(' ')[0].substring(0, 5),
+    foodProductId: '',
+    foodName: '',
+    foodType: '主食',
+    amountValue: '',
+    amountUnit: '克',
+    totalKcal: '',
+    drankWaterMl: '',
+    specialReaction: '',
+    photoUrl: '',
+    mainIngredients: [],
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user || !activePetId) {
+      setError('用戶或寵物未選定，請重新登入。');
+      router.replace('/');
+    }
+  }, [user, activePetId, router]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleProductSelect = (product: FoodProduct) => {
+    setFormData((prev) => ({
+      ...prev,
+      foodProductId: product.id,
+      foodName: product.name,
+      foodType: product.type,
+      totalKcal: product.kcalPer100g && prev.amountValue
+        ? (product.kcalPer100g * parseFloat(prev.amountValue) / 100).toFixed(2)
+        : prev.totalKcal,
+    }));
+  };
+
+  const handleSubmitManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const token = localStorage.getItem('petwise_jwt');
+    if (!token || !user?.id || !activePetId) {
+      setError('用戶或寵物未選定，請重新登入。');
+      setLoading(false);
+      router.replace('/');
+      return;
+    }
+
+    if (!formData.foodName.trim() || !formData.foodType.trim() || formData.amountValue === '') {
+      setError('請填寫食物名稱、類型和份量。');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/diet-records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          petId: activePetId,
+          foodProductId: formData.foodProductId || null,
+          foodName: formData.foodName,
+          foodType: formData.foodType,
+          amountValue: formData.amountValue,
+          amountUnit: formData.amountUnit,
+          totalKcal: formData.totalKcal || null,
+          drankWaterMl: formData.drankWaterMl || null,
+          specialReaction: formData.specialReaction || null,
+          photoUrl: formData.photoUrl || null,
+          mainIngredients: formData.mainIngredients,
+          recordedAt: `${formData.recordDate}T${formData.recordTime}:00`,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '新增失敗');
+      }
+
+      router.back();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '新增失敗，請重試。');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitAI = async () => {
+    if (!aiInput.trim()) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiResult(null);
+
+    const token = localStorage.getItem('petwise_jwt');
+    if (!token || !activePetId) {
+      setAiError('用戶或寵物未選定');
+      setAiLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/ai/parse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userInput: aiInput,
+          petId: activePetId,
+          recordedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'AI 解析失敗');
+      }
+
+      const data = await response.json();
+      const count = data.createdRecords?.count || 0;
+      setAiResult(`✅ AI 已解析並建立 ${count} 筆飲食記錄！`);
+      setTimeout(() => router.back(), 1500);
+    } catch (err: unknown) {
+      setAiError(err instanceof Error ? err.message : 'AI 解析失敗，請重試。');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   return (
-    <div className="mx-auto max-w-lg p-4">
-      <div className="mb-6 flex items-center gap-3">
-        <Link href="/">
-          <Button variant="ghost" size="icon">
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="flex-1 text-xl font-bold">新增記錄</h1>
-        <PetSelector />
-      </div>
-
-      {!currentPet ? (
-        <div className="py-12 text-center">
-          <p className="text-muted-foreground">請先選擇或新增寵物</p>
-          <Link href="/pets/new">
-            <Button className="mt-4">新增寵物</Button>
-          </Link>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-lg mx-auto">
+        <div className="flex items-center mb-4">
+          <button onClick={() => router.back()} className="mr-2 text-gray-600 hover:text-gray-800">
+            ← 返回
+          </button>
+          <h1 className="text-xl font-bold text-gray-800">
+            新增飲食記錄 {activePet ? `(${activePet.name})` : ''}
+          </h1>
         </div>
-      ) : (
-        <div className="space-y-6">
-          {/* AI Input */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="h-4 w-4 text-primary" />
-                口語化輸入
-                <Badge variant="secondary" className="text-xs">AI 解析</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DiaryInput onSuccess={handleSuccess} />
-            </CardContent>
-          </Card>
 
-          {/* Category Shortcuts */}
-          <div>
-            <h2 className="mb-3 text-sm font-medium text-muted-foreground">
-              或選擇分類快速記錄
-            </h2>
-            <div className="grid grid-cols-3 gap-2">
-              {categories.map((category) => (
-                <button
-                  key={category.value}
-                  onClick={() => setSelectedCategory(
-                    selectedCategory === category.value ? null : category.value
-                  )}
-                  className={`flex flex-col items-center rounded-lg border p-4 transition-colors ${
-                    selectedCategory === category.value
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <span className="text-2xl">{category.icon}</span>
-                  <span className="mt-1 text-sm">{category.label}</span>
-                </button>
-              ))}
+        {/* 模式切換 */}
+        <div className="flex space-x-2 mb-4">
+          <button
+            onClick={() => setRecordMode('manual')}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${
+              recordMode === 'manual' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800'
+            }`}
+          >
+            手動輸入
+          </button>
+          <button
+            onClick={() => setRecordMode('ai-chat')}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${
+              recordMode === 'ai-chat' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800'
+            }`}
+          >
+            AI 智能解析
+          </button>
+        </div>
+
+        {recordMode === 'manual' ? (
+          <form onSubmit={handleSubmitManual} className="space-y-4">
+            {error && <div className="bg-red-100 text-red-700 p-2 rounded mb-4">{error}</div>}
+
+            <div>
+              <label htmlFor="recordDate" className="block text-sm font-medium text-gray-700">記錄日期</label>
+              <input type="date" id="recordDate" name="recordDate" value={formData.recordDate} onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
             </div>
-          </div>
+            <div>
+              <label htmlFor="recordTime" className="block text-sm font-medium text-gray-700">記錄時間</label>
+              <input type="time" id="recordTime" name="recordTime" value={formData.recordTime} onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+            </div>
 
-          {/* Selected Category Examples */}
-          {selectedCategory && (
-            <Card>
-              <CardContent className="p-4">
-                <p className="mb-2 text-sm font-medium">
-                  {getCategoryIcon(selectedCategory)}{' '}
-                  {getCategoryLabel(selectedCategory)} 記錄範例：
-                </p>
-                <ul className="space-y-1 text-sm text-muted-foreground">
-                  {categories
-                    .find((c) => c.value === selectedCategory)
-                    ?.examples.map((example, index) => (
-                      <li key={index}>• {example}</li>
-                    ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
+            <div className="border p-3 rounded-md bg-gray-50">
+              <h3 className="font-medium mb-2 text-sm">搜尋並選擇食品（選填）</h3>
+              <FoodProductSearch onSelect={handleProductSelect} petType={activePet?.type ?? undefined} />
+            </div>
 
-          {/* Tips */}
-          <div className="rounded-lg bg-muted/50 p-4">
-            <h3 className="mb-2 text-sm font-medium">使用提示</h3>
-            <ul className="space-y-1 text-sm text-muted-foreground">
-              <li>• 用自然的方式描述，AI 會自動分類</li>
-              <li>• 一次可以記錄多件事（例如：吃飯+散步）</li>
-              <li>• 可以上傳照片讓記錄更完整</li>
-            </ul>
+            <div>
+              <label htmlFor="foodName" className="block text-sm font-medium text-gray-700">食物名稱 *</label>
+              <input type="text" id="foodName" name="foodName" value={formData.foodName} onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                required placeholder="例：皇家幼犬糧" />
+            </div>
+            <div>
+              <label htmlFor="foodType" className="block text-sm font-medium text-gray-700">食物類型 *</label>
+              <select id="foodType" name="foodType" value={formData.foodType} onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                {['主食', '零食', '鮮食', '罐頭', '水', '保健品', '其他'].map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex space-x-2">
+              <div className="flex-1">
+                <label htmlFor="amountValue" className="block text-sm font-medium text-gray-700">份量 *</label>
+                <input type="number" id="amountValue" name="amountValue" value={formData.amountValue}
+                  onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  required step="0.1" placeholder="80" />
+              </div>
+              <div className="w-24">
+                <label htmlFor="amountUnit" className="block text-sm font-medium text-gray-700">單位</label>
+                <select id="amountUnit" name="amountUnit" value={formData.amountUnit} onChange={handleChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                  {['克', 'ml', '份', '碗', '罐', '匙', 'kg'].map((u) => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="totalKcal" className="block text-sm font-medium text-gray-700">總熱量 (kcal)</label>
+              <input type="number" id="totalKcal" name="totalKcal" value={formData.totalKcal}
+                onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                step="1" />
+            </div>
+            <div>
+              <label htmlFor="drankWaterMl" className="block text-sm font-medium text-gray-700">飲水量 (ml)</label>
+              <input type="number" id="drankWaterMl" name="drankWaterMl" value={formData.drankWaterMl}
+                onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                step="1" />
+            </div>
+            <div>
+              <label htmlFor="specialReaction" className="block text-sm font-medium text-gray-700">特殊反應/備註</label>
+              <textarea id="specialReaction" name="specialReaction" value={formData.specialReaction}
+                onChange={handleChange} rows={2}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
+              <button type="button" onClick={() => router.back()}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium bg-white text-gray-700 hover:bg-gray-50">
+                取消
+              </button>
+              <button type="submit" disabled={loading}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300">
+                {loading ? '儲存中...' : '儲存'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              用自然語言描述寵物今天吃了什麼，AI 會自動解析並建立記錄。
+            </p>
+            <textarea
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              rows={4}
+              className="w-full border border-gray-300 rounded-md shadow-sm p-2"
+              placeholder="例：小花今天早上吃了80克皇家幼犬糧，加了半罐巔峰羊肉罐頭，還喝了很多水..."
+            />
+            {aiError && <div className="bg-red-100 text-red-700 p-2 rounded">{aiError}</div>}
+            {aiResult && <div className="bg-green-100 text-green-700 p-2 rounded">{aiResult}</div>}
+            <button
+              onClick={handleSubmitAI}
+              disabled={aiLoading || !aiInput.trim()}
+              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-300"
+            >
+              {aiLoading ? '解析中...' : '🤖 AI 解析並儲存'}
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

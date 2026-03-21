@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       })),
       {
         name: pet.name,
-        species: pet.species,
+        species: pet.species || '',
         breed: pet.breed || undefined,
         age: pet.birthday ? getPetAge(pet.birthday) : '未知',
       }
