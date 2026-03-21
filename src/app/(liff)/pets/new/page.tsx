@@ -51,9 +51,13 @@ export default function NewPetPage() {
       return;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const res = await fetch('/api/pets', {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -70,6 +74,7 @@ export default function NewPetPage() {
           dateOfBirth: form.dateOfBirth || undefined,
         }),
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const data = await res.json();
@@ -80,7 +85,12 @@ export default function NewPetPage() {
       addPet(pet);
       router.push('/');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '建立失敗，請重試');
+      clearTimeout(timeoutId);
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('請求逾時，請稍後重試');
+      } else {
+        setError(err instanceof Error ? err.message : '建立失敗，請重試');
+      }
     } finally {
       setIsSubmitting(false);
     }
