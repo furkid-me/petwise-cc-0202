@@ -13,17 +13,17 @@ const MedicalTypeMap: Record<string, string> = {
 
 export default function MedicalRecordsPage() {
   const router = useRouter();
-  const { user, activePetId } = useUserStore();
+  const { user, currentPetId } = useUserStore();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchRecords = useCallback(async () => {
-    if (!user?.id || !activePetId) return;
+    if (!user?.id || !currentPetId) return;
     setLoading(true);
     try {
       const token = localStorage.getItem('petwise_jwt');
-      const res = await fetch(`/api/medical-records?petId=${activePetId}`, {
+      const res = await fetch(`/api/medical-records?petId=${currentPetId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Failed to fetch');
@@ -34,7 +34,7 @@ export default function MedicalRecordsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, activePetId]);
+  }, [user, currentPetId]);
 
   useEffect(() => {
     fetchRecords();

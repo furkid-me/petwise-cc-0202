@@ -6,7 +6,7 @@ import { useUserStore } from '@/stores/user-store';
 
 export default function NewMedicalRecordPage() {
   const router = useRouter();
-  const { user, activePetId } = useUserStore();
+  const { user, currentPetId } = useUserStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -36,7 +36,7 @@ export default function NewMedicalRecordPage() {
     setError(null);
 
     const token = localStorage.getItem('petwise_jwt');
-    if (!token || !user?.id || !activePetId) {
+    if (!token || !user?.id || !currentPetId) {
       setError('用戶或寵物未認證，請重新登入。');
       setLoading(false);
       router.replace('/');
@@ -57,7 +57,7 @@ export default function NewMedicalRecordPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          petId: activePetId,
+          petId: currentPetId,
           recordDate: formData.recordDate,
           type: formData.type,
           title: formData.title || null,

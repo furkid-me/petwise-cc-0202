@@ -9,7 +9,7 @@ const taskFrequencies = [
 
 export default function NewDailyTaskPage() {
   const router = useRouter();
-  const { user, activePetId } = useUserStore();
+  const { user, currentPetId } = useUserStore();
   const [formData, setFormData] = useState({
     taskName: '', frequency: 'daily',
     startDate: new Date().toISOString().split('T')[0],
@@ -27,7 +27,7 @@ export default function NewDailyTaskPage() {
     e.preventDefault();
     setLoading(true); setError(null);
     const token = localStorage.getItem('petwise_jwt');
-    if (!token || !user?.id || !activePetId) {
+    if (!token || !user?.id || !currentPetId) {
       setError('用戶或寵物未認證，請重新登入。');
       setLoading(false); router.replace('/'); return;
     }
@@ -38,7 +38,7 @@ export default function NewDailyTaskPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          petId: activePetId, taskName: formData.taskName.trim(),
+          petId: currentPetId, taskName: formData.taskName.trim(),
           frequency: formData.frequency, startDate: formData.startDate,
           endDate: formData.endDate || null, isActive: formData.isActive,
           notes: formData.notes || null,

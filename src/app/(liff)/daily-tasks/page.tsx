@@ -17,8 +17,9 @@ interface DailyTask {
 
 export default function DailyTasksPage() {
   const router = useRouter();
-  const { user, activePetId, pets } = useUserStore();
-  const activePet = useMemo(() => pets.find(p => p.id === activePetId), [pets, activePetId]);
+  const { user, currentPetId, pets: rawPets } = useUserStore();
+  const pets = rawPets ?? [];
+  const activePet = useMemo(() => pets.find(p => p.id === currentPetId), [pets, currentPetId]);
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]);

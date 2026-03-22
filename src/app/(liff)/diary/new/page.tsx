@@ -31,8 +31,9 @@ interface FormData {
 
 export default function NewDiaryPage() {
   const router = useRouter();
-  const { user, pets, activePetId } = useUserStore();
-  const activePet = pets.find((p) => p.id === activePetId);
+  const { user, currentPetId, pets: rawPets } = useUserStore();
+  const pets = rawPets ?? [];
+  const activePet = pets.find((p) => p.id === currentPetId);
 
   const [recordMode, setRecordMode] = useState<'manual' | 'ai-chat'>('manual');
   const [formData, setFormData] = useState<FormData>({
@@ -58,11 +59,11 @@ export default function NewDiaryPage() {
   const [aiResult, setAiResult] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user || !activePetId) {
+    if (!user || !currentPetId) {
       setError('用戶或寵物未選定，請重新登入。');
       router.replace('/');
     }
-  }, [user, activePetId, router]);
+  }, [user, currentPetId, router]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -89,7 +90,7 @@ export default function NewDiaryPage() {
     setError(null);
 
     const token = localStorage.getItem('petwise_jwt');
-    if (!token || !user?.id || !activePetId) {
+    if (!token || !user?.id || !currentPetId) {
       setError('用戶或寵物未選定，請重新登入。');
       setLoading(false);
       router.replace('/');
@@ -110,7 +111,7 @@ export default function NewDiaryPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          petId: activePetId,
+          petId: currentPetId,
           foodProductId: formData.foodProductId || null,
           foodName: formData.foodName,
           foodType: formData.foodType,
@@ -145,7 +146,7 @@ export default function NewDiaryPage() {
     setAiResult(null);
 
     const token = localStorage.getItem('petwise_jwt');
-    if (!token || !activePetId) {
+    if (!token || !currentPetId) {
       setAiError('用戶或寵物未選定');
       setAiLoading(false);
       return;
@@ -160,7 +161,7 @@ export default function NewDiaryPage() {
         },
         body: JSON.stringify({
           userInput: aiInput,
-          petId: activePetId,
+          petId: currentPetId,
           recordedAt: new Date().toISOString(),
         }),
       });

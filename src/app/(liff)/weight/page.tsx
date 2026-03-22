@@ -14,8 +14,9 @@ interface WeightRecord {
 
 export default function WeightPage() {
   const router = useRouter();
-  const { user, activePetId, pets } = useUserStore();
-  const activePet = pets.find(p => p.id === activePetId);
+  const { user, currentPetId, pets: rawPets } = useUserStore();
+  const pets = rawPets ?? [];
+  const activePet = pets.find(p => p.id === currentPetId);
 
   const [weightRecords, setWeightRecords] = useState<WeightRecord[]>([]);
   const [latestWeight, setLatestWeight] = useState<WeightRecord | null>(null);

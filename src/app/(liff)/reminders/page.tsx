@@ -23,8 +23,9 @@ const FrequencyMap: Record<string, string> = {
 
 export default function RemindersPage() {
   const router = useRouter();
-  const { user, activePetId, pets } = useUserStore();
-  const activePet = useMemo(() => pets.find(p => p.id === activePetId), [pets, activePetId]);
+  const { user, currentPetId, pets: rawPets } = useUserStore();
+  const pets = rawPets ?? [];
+  const activePet = useMemo(() => pets.find(p => p.id === currentPetId), [pets, currentPetId]);
 
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);

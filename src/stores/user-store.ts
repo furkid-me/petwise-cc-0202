@@ -37,13 +37,14 @@ export const useUserStore = create<UserState>()(
       setUser: (user) => set({ user }),
 
       setPets: (pets) => {
+        const safePets = pets ?? [];
         const currentPetId = get().currentPetId;
         // 如果當前選擇的寵物不在列表中，自動選擇預設或第一隻
-        if (pets.length > 0 && (!currentPetId || !pets.find(p => p.id === currentPetId))) {
-          const defaultPet = pets.find(p => p.isDefault) || pets[0];
-          set({ pets, currentPetId: defaultPet.id });
+        if (safePets.length > 0 && (!currentPetId || !safePets.find(p => p.id === currentPetId))) {
+          const defaultPet = safePets.find(p => p.isDefault) || safePets[0];
+          set({ pets: safePets, currentPetId: defaultPet.id });
         } else {
-          set({ pets });
+          set({ pets: safePets });
         }
       },
 

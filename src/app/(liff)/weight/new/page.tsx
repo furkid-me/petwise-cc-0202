@@ -6,8 +6,9 @@ import { useUserStore } from '@/stores/user-store';
 
 export default function NewWeightRecordPage() {
   const router = useRouter();
-  const { user, activePetId, pets } = useUserStore();
-  const activePet = pets.find(p => p.id === activePetId);
+  const { user, currentPetId, pets: rawPets } = useUserStore();
+  const pets = rawPets ?? [];
+  const activePet = pets.find(p => p.id === currentPetId);
 
   const [formData, setFormData] = useState({
     recordDate: new Date().toISOString().split('T')[0], // 預設今天
@@ -18,11 +19,11 @@ export default function NewWeightRecordPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user || !activePetId) {
+    if (!user || !currentPetId) {
       setError('用戶或寵物未選定，請重新登入。');
       router.replace('/');
     }
-  }, [user, activePetId, router]);
+  }, [user, currentPetId, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -35,7 +36,7 @@ export default function NewWeightRecordPage() {
     setError(null);
 
     const token = localStorage.getItem('petwise_jwt');
-    if (!token || !user?.id || !activePetId) {
+    if (!token || !user?.id || !currentPetId) {
       setError('認證失敗，請重新登入。');
       setLoading(false);
       return;
@@ -49,7 +50,7 @@ export default function NewWeightRecordPage() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          petId: activePetId,
+          petId: currentPetId,
           recordDate: formData.recordDate,
           weightKg: parseFloat(formData.weightKg),
           notes: formData.notes || null,

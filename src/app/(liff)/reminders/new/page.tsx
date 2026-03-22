@@ -17,7 +17,7 @@ const frequencies = [
 
 export default function NewReminderPage() {
   const router = useRouter();
-  const { user, activePetId } = useUserStore();
+  const { user, currentPetId } = useUserStore();
   const [formData, setFormData] = useState({
     title: '', type: 'vaccine', scheduledDate: '', scheduledTime: '',
     frequency: 'once', isActive: true, notes: '',
@@ -34,7 +34,7 @@ export default function NewReminderPage() {
     e.preventDefault();
     setLoading(true); setError(null);
     const token = localStorage.getItem('petwise_jwt');
-    if (!token || !user?.id || !activePetId) {
+    if (!token || !user?.id || !currentPetId) {
       setError('用戶或寵物未認證，請重新登入。');
       setLoading(false); router.replace('/'); return;
     }
@@ -45,7 +45,7 @@ export default function NewReminderPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          petId: activePetId, title: formData.title.trim(),
+          petId: currentPetId, title: formData.title.trim(),
           type: formData.type, scheduledDate: formData.scheduledDate,
           scheduledTime: formData.scheduledTime || null,
           frequency: formData.frequency, isActive: formData.isActive,
