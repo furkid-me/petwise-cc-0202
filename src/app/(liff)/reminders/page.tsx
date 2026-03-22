@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '@/stores/user-store';
 
 interface Reminder {
   id: string; petId: string; userId: string; title: string;

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '@/stores/user-store';
 
 const taskFrequencies = [
   { value: 'daily', label: '每日' }, { value: 'weekly', label: '每週' },

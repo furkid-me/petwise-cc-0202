@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '@/stores/user-store';
 
 const reminderTypes = [
   { value: 'vaccine', label: '疫苗' }, { value: 'deworming', label: '驅蟲' },
