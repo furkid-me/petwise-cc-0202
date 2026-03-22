@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '@/stores/user-store';
 
 export default function LiffLayout({
   children,
@@ -63,6 +63,7 @@ export default function LiffLayout({
       }
     };
 
+    useUserStore.persist.rehydrate();
     initLiff();
   }, [router, setUser, setPets]);
 

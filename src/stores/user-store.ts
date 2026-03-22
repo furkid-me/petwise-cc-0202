@@ -87,6 +87,7 @@ export const useUserStore = create<UserState>()(
     }),
     {
       name: 'petwise-user-store',
+      skipHydration: true,
       partialize: (state) => ({
         user: state.user,
         pets: state.pets,

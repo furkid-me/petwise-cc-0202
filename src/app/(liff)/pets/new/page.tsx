@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '@/stores/user-store';
 
 const HEALTH_OPTIONS = [
   '肝臟', '腎臟', '癌症', '心臟', '結石',
