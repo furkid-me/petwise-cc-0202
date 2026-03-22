@@ -111,7 +111,7 @@ export default function HomePage() {
     };
 
     fetchData();
-  }, [user, activePet]);
+  }, [user?.id, activePet?.id]);
 
   if (!user || !activePet) {
     return (

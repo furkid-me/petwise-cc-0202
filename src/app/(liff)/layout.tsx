@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/stores/user-store';
 
@@ -12,8 +12,13 @@ export default function LiffLayout({
   const [isInitializing, setIsInitializing] = useState(true);
   const router = useRouter();
   const { setUser, setPets, setLoading, setInitialized } = useUserStore();
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    // Prevent re-initialization on every navigation (router reference changes on each push)
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const initLiff = async () => {
       setLoading(true);
       try {
@@ -70,7 +75,8 @@ export default function LiffLayout({
 
     useUserStore.persist.rehydrate();
     initLiff();
-  }, [router, setUser, setPets, setLoading, setInitialized]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isInitializing) {
     return (
