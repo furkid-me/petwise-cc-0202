@@ -34,7 +34,8 @@ interface WeightRecord {
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, currentPetId, pets } = useUserStore();
+  const { user, currentPetId, pets: rawPets } = useUserStore();
+  const pets = rawPets ?? [];
   const activePet = pets.find(p => p.id === currentPetId) || pets[0] || null;
 
   const [todayDietRecords, setTodayDietRecords] = useState<DietRecord[]>([]);
