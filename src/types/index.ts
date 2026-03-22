@@ -79,6 +79,9 @@ export interface Pet {
   allergies: string[];
   isActive: boolean;
   isDefault: boolean;
+  // 營養目標（來自舊 schema，仍在使用中）
+  dailyKcalTarget?: number | null;
+  dailyWaterMlTarget?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }

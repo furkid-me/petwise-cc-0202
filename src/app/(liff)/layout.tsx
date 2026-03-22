@@ -11,10 +11,11 @@ export default function LiffLayout({
 }) {
   const [isInitializing, setIsInitializing] = useState(true);
   const router = useRouter();
-  const { setUser, setPets } = useUserStore();
+  const { setUser, setPets, setLoading, setInitialized } = useUserStore();
 
   useEffect(() => {
     const initLiff = async () => {
+      setLoading(true);
       try {
         const liff = (await import('@line/liff')).default;
         await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID! });
@@ -42,7 +43,8 @@ export default function LiffLayout({
         const { token, user } = await authRes.json();
         localStorage.setItem('petwise_jwt', token);
         localStorage.setItem('petwise_user_id', user.id);
-        setUser(user);
+        // Normalize: Prisma may store picture in profilePictureUrl; new schema uses pictureUrl
+        setUser({ ...user, pictureUrl: user.pictureUrl ?? user.profilePictureUrl ?? null });
 
         // Fetch pets
         const petsRes = await fetch('/api/pets', {
@@ -56,16 +58,19 @@ export default function LiffLayout({
             router.push('/pets/new');
           }
         }
+
+        setInitialized(true);
       } catch (err) {
         console.error('LIFF init error:', err);
       } finally {
+        setLoading(false);
         setIsInitializing(false);
       }
     };
 
     useUserStore.persist.rehydrate();
     initLiff();
-  }, [router, setUser, setPets]);
+  }, [router, setUser, setPets, setLoading, setInitialized]);
 
   if (isInitializing) {
     return (

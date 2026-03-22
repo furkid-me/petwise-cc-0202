@@ -17,13 +17,13 @@ export default function NewPetPage() {
 
   const [form, setForm] = useState({
     name: '',
-    type: 'dog',
+    species: 'DOG',
     breed: '',
     gender: '',
     isNeutered: false,
-    dateOfBirth: '',
-    chipNumber: '',
-    initialWeightKg: '',
+    birthday: '',
+    microchipId: '',
+    weight: '',
     dailyKcalTarget: '',
     dailyWaterMlTarget: '',
     healthNotes: [] as string[],
@@ -59,15 +59,19 @@ export default function NewPetPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          ...form,
-          initialWeightKg: parseFloat(form.initialWeightKg),
-          dailyKcalTarget: form.dailyKcalTarget
-            ? parseInt(form.dailyKcalTarget)
-            : undefined,
-          dailyWaterMlTarget: form.dailyWaterMlTarget
-            ? parseInt(form.dailyWaterMlTarget)
-            : undefined,
-          dateOfBirth: form.dateOfBirth || undefined,
+          name: form.name,
+          species: form.species,
+          breed: form.breed || undefined,
+          gender: form.gender || undefined,
+          isNeutered: form.isNeutered,
+          birthday: form.birthday || undefined,
+          microchipId: form.microchipId || undefined,
+          weight: form.weight ? parseFloat(form.weight) : undefined,
+          dailyKcalTarget: form.dailyKcalTarget ? parseInt(form.dailyKcalTarget) : undefined,
+          dailyWaterMlTarget: form.dailyWaterMlTarget ? parseInt(form.dailyWaterMlTarget) : undefined,
+          medicalNotes: form.healthNotes.length > 0 ? form.healthNotes.join('、') : undefined,
+          healthNotes: form.healthNotes,
+          personalityTraits: form.personalityTraits || undefined,
         }),
       });
 
@@ -109,19 +113,24 @@ export default function NewPetPage() {
             />
           </div>
 
-          {/* Type */}
+          {/* Species */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               種類 <span className="text-red-500">*</span>
             </label>
             <select
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
+              value={form.species}
+              onChange={(e) => setForm({ ...form, species: e.target.value })}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
             >
-              <option value="dog">狗</option>
-              <option value="cat">貓</option>
-              <option value="other">其他</option>
+              <option value="DOG">狗</option>
+              <option value="CAT">貓</option>
+              <option value="BIRD">鳥</option>
+              <option value="RABBIT">兔子</option>
+              <option value="HAMSTER">倉鼠</option>
+              <option value="FISH">魚</option>
+              <option value="REPTILE">爬蟲類</option>
+              <option value="OTHER">其他</option>
             </select>
           </div>
 
@@ -134,9 +143,9 @@ export default function NewPetPage() {
               type="number"
               step="0.1"
               required
-              value={form.initialWeightKg}
+              value={form.weight}
               onChange={(e) =>
-                setForm({ ...form, initialWeightKg: e.target.value })
+                setForm({ ...form, weight: e.target.value })
               }
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
               placeholder="例：3.5"
@@ -168,8 +177,8 @@ export default function NewPetPage() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
             >
               <option value="">不確定</option>
-              <option value="male">公</option>
-              <option value="female">母</option>
+              <option value="MALE">公</option>
+              <option value="FEMALE">母</option>
             </select>
           </div>
 
@@ -189,31 +198,31 @@ export default function NewPetPage() {
             </label>
           </div>
 
-          {/* Date of Birth */}
+          {/* Birthday */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               生日
             </label>
             <input
               type="date"
-              value={form.dateOfBirth}
+              value={form.birthday}
               onChange={(e) =>
-                setForm({ ...form, dateOfBirth: e.target.value })
+                setForm({ ...form, birthday: e.target.value })
               }
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
             />
           </div>
 
-          {/* Chip Number */}
+          {/* Microchip ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               晶片號碼
             </label>
             <input
               type="text"
-              value={form.chipNumber}
+              value={form.microchipId}
               onChange={(e) =>
-                setForm({ ...form, chipNumber: e.target.value })
+                setForm({ ...form, microchipId: e.target.value })
               }
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
             />
