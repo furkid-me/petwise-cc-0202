@@ -154,6 +154,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
+        <img src="/images/hero-cat.png" alt="Petwise hero cat" className="w-full max-w-xs mx-auto mt-4 drop-shadow-lg" />
       </div>
 
       {/* 今日營養進度 */}
