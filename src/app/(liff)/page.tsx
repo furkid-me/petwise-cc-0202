@@ -192,7 +192,7 @@ export default function HomePage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-600 mb-2">未設定每日熱量目標，請在寵物檔案中設定。</p>
+          <p className="text-sm text-gray-600 leading-7 mb-2">未設定每日熱量目標，請在寵物檔案中設定。</p>
         )}
 
         {activePet.dailyWaterMlTarget ? (
@@ -207,7 +207,7 @@ export default function HomePage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-600 mb-2">未設定每日飲水目標，請在寵物檔案中設定。</p>
+          <p className="text-sm text-gray-600 leading-7 mb-2">未設定每日飲水目標，請在寵物檔案中設定。</p>
         )}
       </div>
 

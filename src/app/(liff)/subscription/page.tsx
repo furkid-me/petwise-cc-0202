@@ -152,7 +152,7 @@ export default function SubscriptionPage() {
             </CardHeader>
             <CardContent className="pb-2">
               <div className="mb-4">
-                <span className="text-3xl font-bold">NT$ {plan.price}</span>
+                <span className="text-3xl font-bold tracking-tight">NT$ {plan.price}</span>
                 <span className="text-muted-foreground"> / {plan.period}</span>
               </div>
               <ul className="space-y-2">
@@ -186,7 +186,7 @@ export default function SubscriptionPage() {
         ))}
       </div>
 
-      <div className="mt-6 rounded-lg bg-muted/50 p-4">
+      <div className="mt-6 rounded-full bg-muted/50 p-4">
         <h3 className="mb-2 text-sm font-medium">付款說明</h3>
         <ul className="space-y-1 text-sm text-muted-foreground">
           <li>• 支援 LINE Pay 付款</li>
