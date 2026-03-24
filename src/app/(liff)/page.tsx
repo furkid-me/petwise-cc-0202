@@ -77,7 +77,7 @@ export default function HomePage() {
 
         if (dietResponse.ok) {
           const dietData = await dietResponse.json();
-          setTodayDietRecordsData(dietData);
+          setTodayDietRecordsData(Array.isArray(dietData) ? dietData : []);
         } else {
           const errorData = await dietResponse.json();
           setErrorRecordsData(errorData.error || '載入本日飲食記錄失敗。');
@@ -93,7 +93,7 @@ export default function HomePage() {
 
         if (weightResponse.ok) {
           const weightData = await weightResponse.json();
-          if (weightData.length > 0) {
+          if (Array.isArray(weightData) && weightData.length > 0) {
             setLatestWeight(weightData[0]);
           } else {
             setLatestWeight(null);
@@ -125,8 +125,9 @@ export default function HomePage() {
     );
   }
 
-  const totalKcalConsumed = todayDietRecords.reduce((sum, record) => sum + (record.totalKcal || 0), 0);
-  const totalWaterConsumed = todayDietRecords.reduce((sum, record) => sum + (record.drankWaterMl || 0), 0);
+  const safeRecords = Array.isArray(todayDietRecords) ? todayDietRecords : [];
+  const totalKcalConsumed = safeRecords.reduce((sum, record) => sum + (record.totalKcal || 0), 0);
+  const totalWaterConsumed = safeRecords.reduce((sum, record) => sum + (record.drankWaterMl || 0), 0);
 
   const kcalProgress = activePet.dailyKcalTarget
     ? Math.min((totalKcalConsumed / activePet.dailyKcalTarget) * 100, 100)
@@ -226,11 +227,11 @@ export default function HomePage() {
           <p className="text-center text-gray-400 py-4">載入中...</p>
         ) : errorRecords ? (
           <p className="text-center text-red-500 py-4">{errorRecords}</p>
-        ) : todayDietRecords.length === 0 ? (
+        ) : safeRecords.length === 0 ? (
           <p className="text-center text-gray-400 py-4">今日尚無飲食記錄，點擊 + 新增！</p>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {todayDietRecords.map(record => (
+            {safeRecords.map(record => (
               <li key={record.id} className="py-3">
                 <div className="flex justify-between items-start">
                   <div>
