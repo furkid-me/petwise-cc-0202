@@ -3,9 +3,6 @@
 import { useState } from 'react';
 import { ChevronLeft, Check, Crown, Star, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useUserStore } from '@/stores/user-store';
 import type { SubscriptionPlan } from '@/types';
 
@@ -23,6 +20,7 @@ interface Plan {
   icon: React.ReactNode;
   features: PlanFeature[];
   highlighted?: boolean;
+  dark?: boolean;
 }
 
 const plans: Plan[] = [
@@ -32,7 +30,7 @@ const plans: Plan[] = [
     price: 0,
     period: '永久免費',
     description: '適合初次使用的飼主',
-    icon: <Zap className="h-6 w-6" />,
+    icon: <Zap className="h-5 w-5" />,
     features: [
       { text: '1 隻寵物', included: true },
       { text: '每日 5 則記錄', included: true },
@@ -52,7 +50,7 @@ const plans: Plan[] = [
     price: 79,
     period: '每月',
     description: '多寵物家庭的最佳選擇',
-    icon: <Star className="h-6 w-6" />,
+    icon: <Star className="h-5 w-5" />,
     highlighted: true,
     features: [
       { text: '3 隻寵物', included: true },
@@ -73,7 +71,8 @@ const plans: Plan[] = [
     price: 149,
     period: '每月',
     description: '專業飼主的完整功能',
-    icon: <Crown className="h-6 w-6" />,
+    icon: <Crown className="h-5 w-5" />,
+    dark: true,
     features: [
       { text: '無限寵物', included: true },
       { text: '無限則記錄', included: true },
@@ -97,103 +96,147 @@ export default function SubscriptionPage() {
 
   const handleSubscribe = async () => {
     if (selectedPlan === 'FREE' || selectedPlan === currentPlan) return;
-
     setIsProcessing(true);
-
-    // In production, integrate with LINE Pay or other payment gateway
-    // For demo, show alert
     alert('付款功能開發中，敬請期待！');
-
     setIsProcessing(false);
   };
 
   return (
-    <div className="mx-auto max-w-lg p-4">
-      <div className="mb-6 flex items-center gap-3">
-        <Link href="/settings">
-          <Button variant="ghost" size="icon">
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="text-xl font-bold">訂閱方案</h1>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="mx-auto max-w-lg px-4 py-6 pb-24">
 
-      <div className="space-y-4">
-        {plans.map((plan) => (
-          <Card
-            key={plan.id}
-            className={`cursor-pointer transition-all ${
-              selectedPlan === plan.id ? 'ring-2 ring-primary' : ''
-            } ${plan.highlighted ? 'border-primary' : ''}`}
-            onClick={() => setSelectedPlan(plan.id)}
-          >
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`rounded-full p-2 ${
-                    plan.highlighted ? 'bg-primary/10 text-primary' : 'bg-muted'
-                  }`}>
-                    {plan.icon}
-                  </div>
-                  <div>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      {plan.name}
-                      {plan.highlighted && (
-                        <Badge>推薦</Badge>
-                      )}
-                      {currentPlan === plan.id && (
-                        <Badge variant="secondary">目前方案</Badge>
-                      )}
-                    </CardTitle>
-                    <CardDescription>{plan.description}</CardDescription>
+        {/* 頂部導覽 */}
+        <div className="mb-6 flex items-center gap-3">
+          <Link href="/settings">
+            <button className="h-9 w-9 rounded-full ring-1 ring-gray-950/10 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors">
+              <ChevronLeft className="h-5 w-5 text-gray-600" />
+            </button>
+          </Link>
+          <div>
+            <p className="font-mono text-xs uppercase tracking-wider text-gray-400">方案選擇</p>
+            <h1 className="text-xl font-bold tracking-tight text-gray-900">訂閱方案</h1>
+          </div>
+        </div>
+
+        {/* 方案卡片 */}
+        <div className="space-y-3">
+          {plans.map((plan) => {
+            const isSelected = selectedPlan === plan.id;
+            const isDark = plan.dark;
+
+            return (
+              <div
+                key={plan.id}
+                onClick={() => setSelectedPlan(plan.id)}
+                className={[
+                  'cursor-pointer rounded-2xl p-4 transition-all',
+                  isDark
+                    ? 'bg-gray-950 ring-1 ring-inset ring-white/10'
+                    : plan.highlighted
+                    ? 'bg-indigo-950/[0.03] ring-1 ring-inset ring-indigo-200/60'
+                    : 'bg-gray-950/[0.025] ring-1 ring-inset ring-gray-950/5',
+                  isSelected && !isDark ? 'ring-2 ring-indigo-600' : '',
+                  isSelected && isDark ? 'ring-2 ring-white/40' : '',
+                ].join(' ')}
+              >
+                {/* 卡片標題行 */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={[
+                      'rounded-full p-1.5',
+                      isDark ? 'bg-white/10 text-white' : plan.highlighted ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-600',
+                    ].join(' ')}>
+                      {plan.icon}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {plan.name}
+                        </span>
+                        {plan.highlighted && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 text-white font-medium">
+                            推薦
+                          </span>
+                        )}
+                        {currentPlan === plan.id && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isDark ? 'bg-white/10 text-white/70' : 'bg-gray-100 text-gray-500'}`}>
+                            目前方案
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs mt-0.5 ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                        {plan.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pb-2">
-              <div className="mb-4">
-                <span className="text-3xl font-bold tracking-tight">NT$ {plan.price}</span>
-                <span className="text-muted-foreground"> / {plan.period}</span>
-              </div>
-              <ul className="space-y-2">
-                {plan.features.map((feature, index) => (
-                  <li
-                    key={index}
-                    className={`flex items-center gap-2 text-sm ${
-                      feature.included ? '' : 'text-muted-foreground'
-                    }`}
-                  >
-                    <Check className={`h-4 w-4 ${
-                      feature.included ? 'text-primary' : 'opacity-30'
-                    }`} />
-                    {feature.text}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            {selectedPlan === plan.id && plan.id !== currentPlan && plan.id !== 'FREE' && (
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  onClick={handleSubscribe}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? '處理中...' : `升級到${plan.name}`}
-                </Button>
-              </CardFooter>
-            )}
-          </Card>
-        ))}
-      </div>
 
-      <div className="mt-6 rounded-full bg-muted/50 p-4">
-        <h3 className="mb-2 text-sm font-medium">付款說明</h3>
-        <ul className="space-y-1 text-sm text-muted-foreground">
-          <li>• 支援 LINE Pay 付款</li>
-          <li>• 隨時可以取消訂閱</li>
-          <li>• 取消後仍可使用至週期結束</li>
-          <li>• 降級方案時資料不會遺失</li>
-        </ul>
+                {/* 價格 */}
+                <div className={`mb-3 pb-3 border-b ${isDark ? 'border-white/10' : 'border-gray-950/[0.06]'}`}>
+                  <span className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    NT$ {plan.price}
+                  </span>
+                  <span className={`text-sm ml-1 ${isDark ? 'text-white/50' : 'text-gray-400'}`}>
+                    / {plan.period}
+                  </span>
+                </div>
+
+                {/* 功能列表 */}
+                <ul className="space-y-1.5">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-center gap-2 text-sm">
+                      <Check className={[
+                        'h-3.5 w-3.5 flex-shrink-0',
+                        feature.included
+                          ? isDark ? 'text-emerald-400' : 'text-emerald-500'
+                          : isDark ? 'text-white/20' : 'text-gray-300',
+                      ].join(' ')} />
+                      <span className={[
+                        feature.included
+                          ? isDark ? 'text-white/90' : 'text-gray-700'
+                          : isDark ? 'text-white/30' : 'text-gray-400',
+                      ].join(' ')}>
+                        {feature.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA 按鈕 */}
+                {isSelected && plan.id !== currentPlan && plan.id !== 'FREE' && (
+                  <div className="mt-4">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleSubscribe(); }}
+                      disabled={isProcessing}
+                      className={[
+                        'w-full h-9 rounded-full text-sm font-medium transition-colors',
+                        isDark
+                          ? 'bg-white text-gray-950 hover:bg-gray-100'
+                          : 'bg-indigo-600 text-white hover:bg-indigo-700',
+                      ].join(' ')}
+                    >
+                      {isProcessing ? '處理中...' : `升級到${plan.name}`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Section 分隔線 */}
+        <div className="my-5 border-t border-gray-950/[0.08]" />
+
+        {/* 付款說明 */}
+        <div className="bg-gray-950/[0.025] ring-1 ring-inset ring-gray-950/5 rounded-2xl p-4">
+          <p className="font-mono text-xs uppercase tracking-wider text-gray-400 mb-3">付款說明</p>
+          <ul className="space-y-1.5 text-sm text-gray-500 leading-7">
+            <li>· 支援 LINE Pay 付款</li>
+            <li>· 隨時可以取消訂閱</li>
+            <li>· 取消後仍可使用至週期結束</li>
+            <li>· 降級方案時資料不會遺失</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
