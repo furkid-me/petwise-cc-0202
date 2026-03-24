@@ -102,8 +102,8 @@ export default function WeightPage() {
           <h1 className="text-xl font-bold">體重記錄 🐾</h1>
           {activePet && (
             <div className="flex items-center space-x-2 bg-indigo-700 px-3 py-1 rounded-full">
-              {activePet.profilePictureUrl && (
-                <img src={activePet.profilePictureUrl} alt={activePet.name} className="w-6 h-6 rounded-full object-cover" />
+              {activePet.photoUrl && (
+                <img src={activePet.photoUrl} alt={activePet.name} className="w-6 h-6 rounded-full object-cover" />
               )}
               <span className="text-sm font-medium">{activePet.name}</span>
             </div>
