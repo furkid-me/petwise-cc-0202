@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { sendReminderNotification } from '@/lib/line-messaging';
 
 // This endpoint should be called by a cron job every minute

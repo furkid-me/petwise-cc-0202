@@ -1,8 +1,12 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 export interface ParsedDiaryEntry {
   category: 'FOOD' | 'HEALTH' | 'ACTIVITY' | 'MEDICAL' | 'GROOMING' | 'BEHAVIOR' | 'OTHER';
@@ -193,7 +197,7 @@ export async function parseDiaryInput(
   }
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -594,7 +598,7 @@ export async function analyzeImageWithAI(
   }
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o', // GPT-4 Vision
       messages: [
         {
@@ -816,7 +820,7 @@ ${diaryText}
 }`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
         { role: 'user', content: prompt },

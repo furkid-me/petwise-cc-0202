@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
 // PUT /api/reminders/[id] - Update a reminder

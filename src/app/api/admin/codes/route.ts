@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { nanoid } from 'nanoid';
 
 // 簡單的管理員密碼驗證（生產環境應使用更安全的方式）

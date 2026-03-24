@@ -5,9 +5,9 @@ import jwt from 'jsonwebtoken';
 import OpenAI from 'openai';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key';
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(request: Request) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   try {
     const token = request.headers.get('Authorization')?.split(' ')[1];
     if (!token) {
