@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import OpenAI from 'openai';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key';
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const getOpenAI = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(request: Request) {
   try {
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
 
 只回傳 JSON，不要有其他文字。`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },

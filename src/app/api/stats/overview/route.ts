@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
 // GET /api/stats/overview - Get overview statistics

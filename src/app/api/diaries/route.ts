@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getCurrentUser, checkSubscriptionLimit } from '@/lib/auth';
 import { parseDiaryInput } from '@/lib/ai-parser';
 

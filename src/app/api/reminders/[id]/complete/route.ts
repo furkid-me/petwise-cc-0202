@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
 // POST /api/reminders/[id]/complete - Mark reminder as completed

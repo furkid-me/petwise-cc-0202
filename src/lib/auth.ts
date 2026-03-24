@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import prisma from './prisma';
+import { prisma } from './prisma';
 import type { User } from '@/types';
 
 const LINE_VERIFY_URL = 'https://api.line.me/oauth2/v2.1/verify';
