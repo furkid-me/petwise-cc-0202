@@ -67,9 +67,70 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Temporarily disable fetch to test if page loads
+  // Simple fetch with error handling
   useEffect(() => {
-    setLoadingRecords(false);
+    if (!user || !activePet) return;
+    
+    const loadData = async () => {
+      setLoadingRecords(true);
+      const token = localStorage.getItem('petwise_jwt');
+      if (!token) {
+        setLoadingRecords(false);
+        return;
+      }
+
+      try {
+        // Fetch diet records
+        const today = new Date().toISOString().split('T')[0];
+        const dietRes = await fetch(`/api/diet-records?petId=${activePet.id}&date=${today}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (dietRes.ok) {
+          const data = await dietRes.json();
+          setTodayDietRecords(data.dietRecords || []);
+        }
+      } catch (e) {
+        console.warn('Diet error:', e);
+      }
+
+      try {
+        // Fetch weight
+        const weightRes = await fetch(`/api/weight-records?petId=${activePet.id}&limit=1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (weightRes.ok) {
+          const data = await weightRes.json();
+          if (data.weightRecords?.[0]) {
+            setLatestWeight(data.weightRecords[0]);
+          }
+        }
+      } catch (e) {
+        console.warn('Weight error:', e);
+      }
+
+      try {
+        // Fetch expenses
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        const expenseRes = await fetch(`/api/expense-records?startDate=${monthStart}&endDate=${monthEnd}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (expenseRes.ok) {
+          const data = await expenseRes.json();
+          const expenses = Array.isArray(data) ? data : [];
+          setMonthlyExpenses(expenses);
+          const total = expenses.reduce((sum, e) => sum + (Number(e?.amount) || 0), 0);
+          setTotalMonthlyExpense(total);
+        }
+      } catch (e) {
+        console.warn('Expense error:', e);
+      }
+
+      setLoadingRecords(false);
+    };
+
+    loadData();
   }, [user?.id, activePet?.id]);
 
   if (!user || !activePet) {
