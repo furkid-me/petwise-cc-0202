@@ -48,7 +48,8 @@ export default function WeightPage() {
         }
       } else {
         const errorData = await weightResponse.json();
-        console.error('Failed to fetch latest weight:', errorData.error);
+        console.error('Failed to fetch latest weight:', errorData);
+        setError(`無法載入最新體重：${errorData.error || weightResponse.status}`);
       }
 
       // 獲取所有體重記錄
@@ -73,7 +74,8 @@ export default function WeightPage() {
       }
     } catch (err) {
       console.error('Fetch weight records error:', err);
-      setError('載入記錄時發生未知錯誤。');
+      const errorMessage = err instanceof Error ? err.message : '未知錯誤';
+      setError(`載入記錄時發生錯誤：${errorMessage}`);
     } finally {
       setLoading(false);
     }
