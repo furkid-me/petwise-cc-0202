@@ -71,7 +71,11 @@ export default function ProfilePage() {
             ) : (
               <ul className="divide-y divide-gray-950/[0.06]">
                 {pets.map(pet => (
-                  <li key={pet.id} className="py-2.5 flex items-center gap-3">
+                  <li 
+                    key={pet.id} 
+                    className="py-2.5 flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
+                    onClick={() => router.push(`/pets/${pet.id}`)}
+                  >
                     {pet.photoUrl ? (
                       <img
                         src={pet.photoUrl}
@@ -89,6 +93,7 @@ export default function ProfilePage() {
                         預設
                       </span>
                     )}
+                    <span className="ml-auto text-gray-400">›</span>
                   </li>
                 ))}
               </ul>
