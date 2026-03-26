@@ -67,8 +67,11 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Diet fetch - with proper error handling
+  // Diet fetch - with ref to prevent multiple runs
   useEffect(() => {
+    let cancelled = false;
+    let ignoreAfterFetch = false;
+    
     if (!user || !activePet) return;
     
     const token = localStorage.getItem('petwise_jwt');
@@ -81,20 +84,24 @@ export default function HomePage() {
       headers: { 'Authorization': 'Bearer ' + token },
     })
       .then(res => {
-        if (!res.ok) {
-          throw new Error('Diet API error: ' + res.status);
-        }
+        if (cancelled || ignoreAfterFetch) return null;
+        if (!res.ok) throw new Error('Status: ' + res.status);
         return res.json();
       })
       .then(data => {
-        if (Array.isArray(data?.dietRecords)) {
+        if (cancelled || ignoreAfterFetch) return;
+        if (data && Array.isArray(data.dietRecords)) {
           setTodayDietRecords(data.dietRecords);
         }
       })
       .catch(e => {
-        console.warn('Diet fetch error (ignored):', e.message);
+        if (!cancelled) console.warn('Diet fetch error:', e.message);
       });
-  }, [user?.id]);
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, activePet?.id]);
 
   if (!user || !activePet) {
     return (
