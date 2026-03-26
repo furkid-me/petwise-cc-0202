@@ -160,7 +160,7 @@ export default function NewDiaryPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          userInput: aiInput,
+          text: aiInput,
           petId: currentPetId,
           recordedAt: new Date().toISOString(),
         }),

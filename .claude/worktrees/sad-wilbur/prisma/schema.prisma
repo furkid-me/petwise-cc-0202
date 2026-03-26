@@ -1,0 +1,635 @@
+// PetWise - LINE LIFF 寵物日記系統資料庫架構
+// Database: PostgreSQL
+// ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==================== 用戶相關 ====================
+
+// 用戶資料表
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  lineUserId      String    @unique @map("line_user_id")
+  displayName     String?   @map("display_name")
+  profilePictureUrl String? @map("profile_picture_url")
+  pictureUrl      String?   @map("picture_url")
+  statusMessage   String?   @map("status_message")
+
+  // CRM 欄位
+  realName        String?   @map("real_name")
+  email           String?
+  phone           String?
+  gender          UserGender?
+  city            String?
+  district        String?
+
+  // 訂閱相關
+  subscriptionPlan  SubscriptionPlan @default(FREE) @map("subscription_plan")
+  subscriptionStart DateTime?        @map("subscription_start")
+  subscriptionEnd   DateTime?        @map("subscription_end")
+
+  // 設定
+  timezone        String    @default("Asia/Taipei")
+  language        String    @default("zh-TW")
+  notifyEnabled   Boolean   @default(true) @map("notify_enabled")
+
+  // 時間戳記
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(6)
+
+  // 關聯
+  pets               Pet[]
+  diaries            Diary[]
+  reminders          Reminder[]
+  familyMembers      FamilyMember[]
+  payments           Payment[]
+  redemptionLogs     RedemptionLog[]
+  dietRecords        DietRecord[]
+  scheduledFeedings  ScheduledFeeding[]
+  dailyTasks         DailyTask[]
+  weightRecords      WeightRecord[]
+  medicalRecords     MedicalRecord[]
+  medicationRecords  MedicationRecord[]
+  examinationRecords ExaminationRecord[]
+
+  @@map("users")
+}
+
+enum UserGender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum SubscriptionPlan {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+// 家庭成員（共享功能）
+model FamilyMember {
+  id               String     @id @default(uuid()) @db.Uuid
+  userId           String     @map("user_id") @db.Uuid
+  memberLineUserId String     @map("member_line_user_id")
+  memberName       String     @map("member_name")
+  role             FamilyRole @default(VIEWER)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, memberLineUserId])
+  @@map("family_members")
+}
+
+enum FamilyRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// ==================== 寵物相關 ====================
+
+model Pet {
+  id              String      @id @default(uuid()) @db.Uuid
+  userId          String      @map("user_id") @db.Uuid
+
+  // 基本資料
+  name            String
+  type            String?
+  species         PetSpecies?
+  breed           String?
+  gender          PetGender?
+  dateOfBirth     DateTime?   @map("date_of_birth") @db.Timestamptz(6)
+  birthday        DateTime?   @db.Timestamptz(6)
+  adoptionDate    DateTime?   @map("adoption_date") @db.Timestamptz(6)
+
+  // 外觀特徵
+  color           String?
+  weight          Decimal?    @db.Decimal(5, 2)
+  initialWeightKg Decimal?    @db.Decimal(5, 2) @map("initial_weight_kg")
+  profilePictureUrl String?   @map("profile_picture_url")
+  photoUrl        String?     @map("photo_url")
+  personalityTraits String?   @map("personality_traits")
+
+  // 健康資訊
+  isNeutered      Boolean     @default(false) @map("is_neutered")
+  chipNumber      String?     @map("chip_number")
+  microchipId     String?     @map("microchip_id")
+  medicalNotes    String?     @map("medical_notes")
+  healthNotes     String[]    @map("health_notes")
+  allergies       String[]
+
+  // 營養目標
+  dailyKcalTarget    Decimal? @db.Decimal(8, 2) @map("daily_kcal_target")
+  dailyWaterMlTarget Decimal? @db.Decimal(8, 2) @map("daily_water_ml_target")
+
+  // 狀態
+  isActive        Boolean     @default(true) @map("is_active")
+  isDefault       Boolean     @default(false) @map("is_default")
+
+  // 時間戳記
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // 關聯
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  diaries            Diary[]
+  reminders          Reminder[]
+  weightRecords      WeightRecord[]
+  dietRecords        DietRecord[]
+  scheduledFeedings  ScheduledFeeding[]
+  dailyTasks         DailyTask[]
+  medicalRecords     MedicalRecord[]
+  medicationRecords  MedicationRecord[]
+  examinationRecords ExaminationRecord[]
+
+  @@map("pets")
+}
+
+enum PetSpecies {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  HAMSTER
+  FISH
+  REPTILE
+  OTHER
+}
+
+enum PetGender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+// 體重紀錄
+model WeightRecord {
+  id         String   @id @default(uuid()) @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  userId     String   @map("user_id") @db.Uuid
+  petId      String   @map("pet_id") @db.Uuid
+  recordDate DateTime @map("record_date") @db.Date
+  // 體重記錄發生日期
+  weightKg   Decimal  @map("weight_kg") @db.Decimal(5, 2)
+  // 體重（公斤）
+  notes      String?  @db.Text
+  // 備註或特殊情況
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet        Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("weight_records")
+}
+
+// ==================== 食品資料庫 ====================
+
+model FoodProduct {
+  id                  String   @id @default(uuid()) @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  name                String   @db.Text
+  brand               String   @db.Text
+  type                String   @db.Text
+  // 品類型（乾糧、主食罐、副食罐、零食）
+  petType             String[] @map("pet_type")
+  // 適用寵物類型
+  ageGroup            String[] @map("age_group")
+  // 適用年齡層
+  flavor              String?  @db.Text
+  origin              String?  @db.Text
+  fullIngredientsList String   @map("full_ingredients_list") @db.Text
+  // 完整成分列表（原始文字）
+  parsedIngredients   String[] @map("parsed_ingredients")
+  // 解析後的成分
+  mainIngredients     String[] @map("main_ingredients")
+  // 主要成分（AI解析）
+  caloriesPer100g     Decimal? @map("calories_per_100g") @db.Decimal(6, 2)
+  proteinPer100g      Decimal? @map("protein_per_100g") @db.Decimal(6, 2)
+  fatPer100g          Decimal? @map("fat_per_100g") @db.Decimal(6, 2)
+  carbsPer100g        Decimal? @map("carbs_per_100g") @db.Decimal(6, 2)
+  moisturePer100g     Decimal? @map("moisture_per_100g") @db.Decimal(6, 2)
+  fiberPer100g        Decimal? @map("fiber_per_100g") @db.Decimal(6, 2)
+  ashPer100g          Decimal? @map("ash_per_100g") @db.Decimal(6, 2)
+  packageSizeG        Decimal? @map("package_size_g") @db.Decimal(8, 2)
+  servingSizeG        Decimal? @map("serving_size_g") @db.Decimal(6, 2)
+  imageUrl            String?  @map("image_url") @db.Text
+  barcode             String?  @db.Text
+  isVerified          Boolean  @default(false) @map("is_verified")
+  // 是否已人工審核
+  allergens           String[]
+  // 新增過敏原
+
+  dietRecords         DietRecord[]
+  scheduledFeedings   ScheduledFeeding[]
+
+  @@map("food_products")
+}
+
+// ==================== 飲食記錄相關 ====================
+
+model DietRecord {
+  id              String       @id @default(uuid()) @db.Uuid
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  recordedAt      DateTime     @map("recorded_at") @db.Timestamptz(6)
+  // 實際餵食時間
+  userId          String       @map("user_id") @db.Uuid
+  petId           String       @map("pet_id") @db.Uuid
+  foodProductId   String?      @map("food_product_id") @db.Uuid
+  // 若無對應產品則為 null
+  foodName        String       @map("food_name") @db.Text
+  foodType        String       @map("food_type") @db.Text
+  amountValue     Decimal      @map("amount_value") @db.Decimal(6, 2)
+  amountUnit      String       @map("amount_unit") @db.Text
+  totalKcal       Decimal?     @map("total_kcal") @db.Decimal(6, 2)
+  mainIngredients String[]     @map("main_ingredients")
+  // 主要成分（AI解析，若無 food_product_id）
+  drankWaterMl    Decimal?     @map("drank_water_ml") @db.Decimal(6, 2)
+  specialReaction String?      @map("special_reaction") @db.Text
+  photoUrl        String?      @map("photo_url") @db.Text
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet             Pet          @relation(fields: [petId], references: [id], onDelete: Cascade)
+  foodProduct     FoodProduct? @relation(fields: [foodProductId], references: [id])
+
+  @@index([petId, recordedAt])
+  @@map("diet_records")
+}
+
+// 定時餵食設定
+model ScheduledFeeding {
+  id            String       @id @default(uuid()) @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId        String       @map("user_id") @db.Uuid
+  petId         String       @map("pet_id") @db.Uuid
+  foodProductId String?      @map("food_product_id") @db.Uuid
+  foodName      String       @map("food_name") @db.Text
+  foodType      String       @map("food_type") @db.Text
+  amountValue   Decimal      @map("amount_value") @db.Decimal(6, 2)
+  amountUnit    String       @map("amount_unit") @db.Text
+  scheduledTime String       @map("scheduled_time") @db.Text
+  // 排程時間（HH:mm 格式）
+  isActive      Boolean      @default(true) @map("is_active")
+  // 是否啟用排程
+  notes         String?      @db.Text
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet           Pet          @relation(fields: [petId], references: [id], onDelete: Cascade)
+  foodProduct   FoodProduct? @relation(fields: [foodProductId], references: [id])
+
+  @@map("scheduled_feedings")
+}
+
+// 每日任務
+model DailyTask {
+  id         String    @id @default(uuid()) @map("id") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId     String    @map("user_id") @db.Uuid
+  petId      String    @map("pet_id") @db.Uuid
+  taskName   String    @map("task_name") @db.Text
+  // 任務名稱
+  frequency  String    @db.Text
+  // 任務頻率 (daily, weekly)
+  startDate  DateTime  @map("start_date") @db.Date
+  // 任務開始日期
+  endDate    DateTime? @map("end_date") @db.Date
+  // 任務結束日期
+  isActive   Boolean   @default(true) @map("is_active") @db.Boolean
+  // 是否啟用任務
+  notes      String?   @db.Text
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet        Pet             @relation(fields: [petId], references: [id], onDelete: Cascade)
+  executions TaskExecution[]
+
+  @@map("daily_tasks")
+}
+
+model TaskExecution {
+  id            String    @id @default(uuid()) @map("id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  taskId        String    @map("task_id") @db.Uuid
+  executionDate DateTime  @map("execution_date") @db.Date
+  // 實際執行日期
+  isCompleted   Boolean   @default(true) @map("is_completed") @db.Boolean
+  // 是否完成
+  notes         String?   @db.Text
+
+  dailyTask DailyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_executions")
+}
+
+// ==================== 醫療相關 ====================
+
+model MedicalRecord {
+  id              String    @id @default(uuid()) @map("id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId          String    @map("user_id") @db.Uuid
+  petId           String    @map("pet_id") @db.Uuid
+  recordDate      DateTime  @map("record_date") @db.Date
+  type            String    @db.Text
+  // 記錄類型 (vet_visit, checkup, symptom, ongoing_issue)
+  title           String?   @db.Text
+  // 標題（例如：持續嘔吐檢查、年度健檢）
+  clinicName      String?   @map("clinic_name") @db.Text
+  // 診所名稱
+  veterinarian    String?   @db.Text
+  // 獸醫姓名
+  diagnosis       String?   @db.Text
+  // 診斷結果
+  treatmentPlan   String?   @map("treatment_plan") @db.Text
+  // 治療計畫
+  costTwd         Decimal?  @map("cost_twd") @db.Decimal(8, 2)
+  // 費用（台幣）
+  notes           String?   @db.Text
+  // 備註或詳細描述
+  attachmentUrls  String[]  @map("attachment_urls")
+  // 附件照片/檔案 URL
+  isOngoingIssue  Boolean   @default(false) @map("is_ongoing_issue") @db.Boolean
+  // 是否為持續性健康問題
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet             Pet               @relation(fields: [petId], references: [id], onDelete: Cascade)
+  medications     MedicationRecord[]
+  examinations    ExaminationRecord[]
+
+  @@map("medical_records")
+}
+
+model MedicationRecord {
+  id               String    @id @default(uuid()) @map("id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId           String    @map("user_id") @db.Uuid
+  petId            String    @map("pet_id") @db.Uuid
+  medicalRecordId  String?   @map("medical_record_id") @db.Uuid
+  // 關聯的就診記錄（可選）
+  medicationName             String    @map("medication_name") @db.Text
+  // 藥物名稱
+  dosageValue                Decimal   @map("dosage_value") @db.Decimal(8, 2)
+  // 劑量數值
+  dosageUnit                 String    @map("dosage_unit") @db.Text
+  // 劑量單位（顆、ml、mg 等）
+  startDate                  DateTime  @map("start_date") @db.Date
+  // 開始服藥日期
+  endDate                    DateTime? @map("end_date") @db.Date
+  // 結束服藥日期（可選）
+  frequency                  String    @db.Text
+  // 服藥頻率（daily, twice_daily, weekly 等）
+  purpose                    String?   @db.Text
+  // 用途（例如：消炎、驅蟲）
+  sideEffectsObserved        String?   @map("side_effects_observed") @db.Text
+  // 觀察到的副作用
+  postMedicationObservations String?   @map("post_medication_observations") @db.Text
+  // 服藥後觀察
+  photoUrl                   String?   @map("photo_url") @db.Text
+  // 藥品照片 URL
+  notes                      String?   @db.Text
+  // 備註
+
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet              Pet            @relation(fields: [petId], references: [id], onDelete: Cascade)
+  medicalRecord    MedicalRecord? @relation(fields: [medicalRecordId], references: [id], onDelete: SetNull)
+
+  @@map("medication_records")
+}
+
+model ExaminationRecord {
+  id               String    @id @default(uuid()) @map("id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId           String    @map("user_id") @db.Uuid
+  petId            String    @map("pet_id") @db.Uuid
+  medicalRecordId  String?   @map("medical_record_id") @db.Uuid
+  examinationDate  DateTime  @map("examination_date") @db.Date
+  // 檢驗日期
+  examinationType  String    @map("examination_type") @db.Text
+  // 檢驗類型（血檢、尿檢、X光、超音波、其他）
+  clinicName       String?   @map("clinic_name") @db.Text
+  // 執行診所
+  reportUrl        String?   @map("report_url") @db.Text
+  // 報告檔案 URL（PDF/圖片）
+  notes            String?   @db.Text
+  // 備註或結論
+  results          Json?     @db.JsonB
+  // 檢驗結果詳情（可儲存為 JSONB）
+  // 例如：[{"item": "SDMA", "value": 14, "unit": "ug/dL", "ref_range": "0-14"}, ...]
+
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet              Pet            @relation(fields: [petId], references: [id], onDelete: Cascade)
+  medicalRecord    MedicalRecord? @relation(fields: [medicalRecordId], references: [id], onDelete: SetNull)
+
+  @@map("examination_records")
+}
+
+// ==================== 日記相關 ====================
+
+model Diary {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  petId       String        @map("pet_id") @db.Uuid
+  rawInput    String?       @map("raw_input")
+  category    DiaryCategory
+  subCategory String?       @map("sub_category")
+  content     String
+  details     Json?
+  mood        Int?
+  severity    Int?
+  photos      String[]
+  occurredAt  DateTime      @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  isPinned    Boolean       @default(false) @map("is_pinned")
+  isImportant Boolean       @default(false) @map("is_important")
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet         Pet           @relation(fields: [petId], references: [id], onDelete: Cascade)
+  tags        DiaryTag[]
+
+  @@index([userId, petId, occurredAt])
+  @@index([category])
+  @@map("diaries")
+}
+
+enum DiaryCategory {
+  FOOD
+  HEALTH
+  ACTIVITY
+  MEDICAL
+  GROOMING
+  BEHAVIOR
+  OTHER
+}
+
+model Tag {
+  id      String     @id @default(uuid()) @db.Uuid
+  name    String     @unique
+  color   String?
+  diaries DiaryTag[]
+
+  @@map("tags")
+}
+
+model DiaryTag {
+  diaryId String @map("diary_id") @db.Uuid
+  tagId   String @map("tag_id") @db.Uuid
+
+  diary   Diary  @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([diaryId, tagId])
+  @@map("diary_tags")
+}
+
+// ==================== 提醒相關 ====================
+
+model Reminder {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  petId          String?          @map("pet_id") @db.Uuid
+  title          String
+  description    String?
+  category       ReminderCategory
+  remindAt       DateTime         @map("remind_at") @db.Timestamptz(6)
+  repeatType     RepeatType       @default(NONE) @map("repeat_type")
+  repeatInterval Int?             @map("repeat_interval")
+  repeatEndAt    DateTime?        @map("repeat_end_at") @db.Timestamptz(6)
+  isActive       Boolean          @default(true) @map("is_active")
+  isCompleted    Boolean          @default(false) @map("is_completed")
+  completedAt    DateTime?        @map("completed_at") @db.Timestamptz(6)
+  notifySent     Boolean          @default(false) @map("notify_sent")
+  notifySentAt   DateTime?        @map("notify_sent_at") @db.Timestamptz(6)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet            Pet?             @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([userId, remindAt])
+  @@index([isActive, remindAt])
+  @@map("reminders")
+}
+
+enum ReminderCategory {
+  VACCINE
+  DEWORMING
+  GROOMING
+  CHECKUP
+  MEDICATION
+  FOOD
+  OTHER
+}
+
+enum RepeatType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  CUSTOM
+}
+
+// ==================== 付款相關 ====================
+
+model Payment {
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @map("user_id") @db.Uuid
+  amount        Decimal          @db.Decimal(10, 2)
+  currency      String           @default("TWD")
+  plan          SubscriptionPlan
+  paymentMethod String           @map("payment_method")
+  transactionId String?          @map("transaction_id")
+  status        PaymentStatus    @default(PENDING)
+  periodStart   DateTime         @map("period_start") @db.Timestamptz(6)
+  periodEnd     DateTime         @map("period_end") @db.Timestamptz(6)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  paidAt        DateTime?        @map("paid_at") @db.Timestamptz(6)
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// ==================== 系統相關 ====================
+
+model AiParseLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  rawInput     String   @map("raw_input")
+  parsedOutput Json     @map("parsed_output")
+  wasAccepted  Boolean? @map("was_accepted")
+  userFeedback String?  @map("user_feedback")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("ai_parse_logs")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("system_settings")
+}
+
+// ==================== 兌換碼相關 ====================
+
+model RedemptionCode {
+  id           String           @id @default(uuid()) @db.Uuid
+  code         String           @unique
+  plan         SubscriptionPlan
+  durationDays Int              @map("duration_days")
+  maxUses      Int              @default(1) @map("max_uses")
+  currentUses  Int              @default(0) @map("current_uses")
+  validFrom    DateTime         @default(now()) @map("valid_from") @db.Timestamptz(6)
+  validUntil   DateTime?        @map("valid_until") @db.Timestamptz(6)
+  isActive     Boolean          @default(true) @map("is_active")
+  description  String?
+  createdBy    String?          @map("created_by")
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  redemptionLogs RedemptionLog[]
+
+  @@map("redemption_codes")
+}
+
+model RedemptionLog {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @map("user_id") @db.Uuid
+  codeId       String           @map("code_id") @db.Uuid
+  plan         SubscriptionPlan
+  durationDays Int              @map("duration_days")
+  periodStart  DateTime         @map("period_start") @db.Timestamptz(6)
+  periodEnd    DateTime         @map("period_end") @db.Timestamptz(6)
+  redeemedAt   DateTime         @default(now()) @map("redeemed_at") @db.Timestamptz(6)
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code         RedemptionCode   @relation(fields: [codeId], references: [id], onDelete: Cascade)
+
+  @@map("redemption_logs")
+}

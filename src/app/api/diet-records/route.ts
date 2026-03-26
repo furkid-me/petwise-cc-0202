@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         foodType,
         amountValue: parseFloat(amountValue),
         amountUnit,
-        recordedAt: new Date(recordedAt),
+        recordedAt: new Date(recordedAt + (recordedAt.endsWith('Z') ? '' : 'Z')),
         totalKcal: totalKcal ? parseFloat(totalKcal) : null,
         mainIngredients: mainIngredients || [],
         drankWaterMl: drankWaterMl ? parseFloat(drankWaterMl) : null,
@@ -89,9 +89,9 @@ export async function GET(request: Request) {
     const whereClause: any = { userId: decodedToken.userId };
     if (petId) whereClause.petId = petId;
     if (date) {
-      const startOfDay = new Date(date);
-      const endOfDay = new Date(date);
-      endOfDay.setDate(endOfDay.getDate() + 1);
+      // 確保使用 UTC，避免時區問題
+      const startOfDay = new Date(date + 'T00:00:00Z');
+      const endOfDay = new Date(date + 'T23:59:59Z');
       whereClause.recordedAt = { gte: startOfDay, lt: endOfDay };
     }
 
