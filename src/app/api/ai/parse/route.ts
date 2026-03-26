@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
 今天的日期是 ${today}。
 
-請解析以下 7 種類型的記錄：
+請解析以下 8 種類型的記錄：
 1. dietRecords（飲食記錄）
 2. weightRecords（體重記錄）
 3. reminders（提醒事項）
@@ -41,6 +41,17 @@ export async function POST(request: Request) {
 5. medicalRecords（醫療記錄）
 6. medicationRecords（用藥記錄）
 7. examinationRecords（檢驗記錄）
+8. expenseRecords（花費記錄）⭐
+
+重要：當用戶提到「花了OO元」、「買了OO花了XX」、「費用XX」等和金錢相關的描述時，請自動分類到 expenseRecords。
+
+花費類別判斷規則：
+- 如果提到「罐頭、乾糧、飼料、零食、食物、吃、喝」等 → FOOD
+- 如果提到「醫院、診所、獸醫、看醫生、檢查、手術、驅蟲、疫苗」等 → MEDICAL
+- 如果提到「美容、洗澡、剪毛」等 → GROOMING
+- 如果提到「貓砂、玩具、窩、籠子、牽繩、用品」等 → SUPPLIES
+- 如果提到「保險」→ INSURANCE
+- 其他無法判斷的 → OTHER
 
 請以以下 JSON 格式回傳（若某種類型沒有資料，請回傳空陣列）：
 {
@@ -114,6 +125,15 @@ export async function POST(request: Request) {
       "notes": "備註（可選）",
       "results": {}
     }
+  ],
+  "expenseRecords": [
+    {
+      "recordDate": "YYYY-MM-DD",
+      "category": "FOOD|MEDICAL|GROOMING|SUPPLIES|INSURANCE|OTHER",
+      "description": "花費描述（如：狗罐頭180g）",
+      "amount": 180,
+      "notes": "備註（可選）"
+    }
   ]
 }
 
@@ -141,6 +161,7 @@ export async function POST(request: Request) {
         medicalRecords: [],
         medicationRecords: [],
         examinationRecords: [],
+        expenseRecords: [],
       };
     }
 
@@ -152,6 +173,7 @@ export async function POST(request: Request) {
       medicalRecords = [],
       medicationRecords = [],
       examinationRecords = [],
+      expenseRecords = [],
     } = parsedData;
 
     let createdRecords = 0;
@@ -279,10 +301,35 @@ export async function POST(request: Request) {
       createdRecords += examinationRecords.length;
     }
 
+    // 儲存花費記錄
+    if (expenseRecords.length > 0) {
+      await prisma.expenseRecord.createMany({
+        data: expenseRecords.map((r: any) => ({
+          userId: decodedToken.userId,
+          petId,
+          recordDate: new Date(r.recordDate),
+          category: r.category,
+          description: r.description,
+          amount: parseFloat(r.amount),
+          notes: r.notes || null,
+        })),
+      });
+      createdRecords += expenseRecords.length;
+    }
+
     return NextResponse.json({
       success: true,
       message: `成功解析並儲存 ${createdRecords} 筆記錄`,
-      parsedData,
+      parsedData: {
+        dietRecords,
+        weightRecords,
+        reminders,
+        dailyTasks,
+        medicalRecords,
+        medicationRecords,
+        examinationRecords,
+        expenseRecords,
+      },
       createdRecords,
     });
   } catch (error) {

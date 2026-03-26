@@ -60,6 +60,7 @@ model User {
   medicalRecords     MedicalRecord[]
   medicationRecords  MedicationRecord[]
   examinationRecords ExaminationRecord[]
+  expenseRecords     ExpenseRecord[]
 
   @@map("users")
 }
@@ -153,6 +154,7 @@ model Pet {
   medicalRecords     MedicalRecord[]
   medicationRecords  MedicationRecord[]
   examinationRecords ExaminationRecord[]
+  expenseRecords     ExpenseRecord[]
 
   @@map("pets")
 }
@@ -436,6 +438,41 @@ model ExaminationRecord {
   medicalRecord    MedicalRecord? @relation(fields: [medicalRecordId], references: [id], onDelete: SetNull)
 
   @@map("examination_records")
+}
+
+// ==================== 花費記錄相關 ====================
+
+model ExpenseRecord {
+  id           String        @id @default(uuid()) @map("id") @db.Uuid
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId      String        @map("user_id") @db.Uuid
+  petId       String        @map("pet_id") @db.Uuid
+  recordDate  DateTime      @map("record_date") @db.Date
+  // 花費日期
+  category    ExpenseCategory @map("category")
+  // 花費類別
+  description String        @map("description") @db.Text
+  // 花費描述（如：狗罐頭、猫砂）
+  amount      Decimal       @map("amount") @db.Decimal(8, 2)
+  // 金額（台幣）
+  notes       String?       @map("notes") @db.Text
+  // 備註
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet         Pet           @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, recordDate])
+  @@map("expense_records")
+}
+
+enum ExpenseCategory {
+  FOOD         // 飼料/零食
+  MEDICAL      // 醫療
+  GROOMING     // 美容
+  SUPPLIES     // 用品（貓砂、玩具等）
+  INSURANCE    // 保險
+  OTHER        // 其他
 }
 
 // ==================== 日記相關 ====================
