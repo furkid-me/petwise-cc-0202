@@ -68,63 +68,64 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    // Skip fetch on server side
+    if (typeof window === 'undefined') return;
+    
     let isMounted = true;
-    const abortController = new AbortController();
     
     const fetchData = async () => {
-      if (!user || !activePet) {
-        setLoadingRecords(false);
-        return;
-      }
-      setLoadingRecords(true);
+      if (!user || !activePet) return;
+      
       try {
         const token = localStorage.getItem('petwise_jwt');
-        if (!token) {
-          if (isMounted) setLoadingRecords(false);
-          return;
-        }
+        if (!token || !isMounted) return;
 
-        const today = new Date().toISOString().split('T')[0];
-        const dietUrl = new URL('/api/diet-records', window.location.origin);
-        dietUrl.searchParams.append('petId', activePet.id);
-        dietUrl.searchParams.append('date', today);
-
-        const dietResponse = await fetch(dietUrl.toString(), {
-          headers: { 'Authorization': `Bearer ${token}` },
-          signal: abortController.signal,
-        });
-
-        if (!isMounted) return;
-
-        if (dietResponse.ok) {
-          const dietData = await dietResponse.json();
-          setTodayDietRecordsData(Array.isArray(dietData) ? dietData : (dietData.dietRecords || []));
-        } else {
-          const errorData = await dietResponse.json();
-          setErrorRecordsData(errorData.error || '載入本日飲食記錄失敗。');
-        }
-
-        const weightUrl = new URL('/api/weight-records', window.location.origin);
-        weightUrl.searchParams.append('petId', activePet.id);
-        const weightResponse = await fetch(
-          weightUrl.toString() + '&limit=1&orderBy=recordDate&order=desc',
-          { headers: { 'Authorization': `Bearer ${token}` }, signal: abortController.signal },
-        );
-
-        if (!isMounted) return;
-
-        if (weightResponse.ok) {
-          const weightData = await weightResponse.json();
-          const weightRecords = Array.isArray(weightData) ? weightData : (weightData.weightRecords || []);
-          if (weightRecords.length > 0) {
-            setLatestWeight(weightRecords[0]);
-          } else {
-            setLatestWeight(null);
-          }
-        }
-
-        // 取得本月花費（所有寵物的總和）
+        // Fetch diet records
         try {
+          const today = new Date().toISOString().split('T')[0];
+          const dietUrl = new URL('/api/diet-records', window.location.origin);
+          dietUrl.searchParams.append('petId', activePet.id);
+          dietUrl.searchParams.append('date', today);
+
+          const dietResponse = await fetch(dietUrl.toString(), {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+
+          if (!isMounted) return;
+
+          if (dietResponse.ok) {
+            const dietData = await dietResponse.json();
+            if (isMounted) {
+              setTodayDietRecordsData(Array.isArray(dietData) ? dietData : (dietData.dietRecords || []));
+            }
+          }
+        } catch (e) { console.warn('Diet fetch error:', e); }
+
+        // Fetch weight records
+        try {
+          if (!isMounted) return;
+          const weightUrl = new URL('/api/weight-records', window.location.origin);
+          weightUrl.searchParams.append('petId', activePet.id);
+          weightUrl.searchParams.append('limit', '1');
+          
+          const weightResponse = await fetch(weightUrl.toString(), {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+
+          if (!isMounted) return;
+
+          if (weightResponse.ok) {
+            const weightData = await weightResponse.json();
+            const weightRecords = Array.isArray(weightData) ? weightData : (weightData.weightRecords || []);
+            if (isMounted && weightRecords.length > 0) {
+              setLatestWeight(weightRecords[0]);
+            }
+          }
+        } catch (e) { console.warn('Weight fetch error:', e); }
+
+        // Fetch expense records
+        try {
+          if (!isMounted) return;
           const now = new Date();
           const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
           const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -135,26 +136,22 @@ export default function HomePage() {
           
           const expenseResponse = await fetch(expenseUrl.toString(), {
             headers: { 'Authorization': `Bearer ${token}` },
-            signal: abortController.signal,
           });
-          
+
           if (!isMounted) return;
-          
+
           if (expenseResponse.ok) {
             const expenseData = await expenseResponse.json();
             const expenses = Array.isArray(expenseData) ? expenseData : [];
-            setMonthlyExpenses(expenses);
-            const total = expenses.reduce((sum: number, e: ExpenseRecord) => sum + (Number(e?.amount) || 0), 0);
-            setTotalMonthlyExpense(total);
+            if (isMounted) {
+              setMonthlyExpenses(expenses);
+              const total = expenses.reduce((sum: number, e: ExpenseRecord) => sum + (Number(e?.amount) || 0), 0);
+              setTotalMonthlyExpense(total);
+            }
           }
-        } catch (expenseErr) {
-          console.warn('Expense fetch error (ignored):', expenseErr);
-          // Don't set error state for expense - it's not critical
-        }
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
+        } catch (e) { console.warn('Expense fetch error:', e); }
+      } catch (err) {
         console.error('Fetch error:', err);
-        if (isMounted) setErrorRecords('載入記錄時發生未知錯誤。');
       } finally {
         if (isMounted) setLoadingRecords(false);
       }
@@ -164,7 +161,6 @@ export default function HomePage() {
     
     return () => {
       isMounted = false;
-      abortController.abort();
     };
   }, [user?.id, activePet?.id]);
 
