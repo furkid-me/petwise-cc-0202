@@ -67,9 +67,16 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // NO FETCH - for testing only
+  // Minimal fetch test - no state update
   useEffect(() => {
-    // Empty - fetch disabled
+    if (!user) return;
+    
+    fetch('/api/pets', {
+      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('petwise_jwt') || '') },
+    })
+      .then(res => res.json())
+      .then(data => console.log('Pets API:', data))
+      .catch(err => console.log('Fetch error:', err));
   }, []);
 
   if (!user || !activePet) {
