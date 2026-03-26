@@ -113,13 +113,12 @@ export default function HomePage() {
           console.error('Failed to fetch latest weight:', errorData.error);
         }
 
-        // 取得本月花費
+        // 取得本月花費（所有寵物的總和）
         const now = new Date();
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
         const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
         
         const expenseUrl = new URL('/api/expense-records', window.location.origin);
-        expenseUrl.searchParams.append('petId', activePet.id);
         expenseUrl.searchParams.append('startDate', firstDayOfMonth);
         expenseUrl.searchParams.append('endDate', lastDayOfMonth);
         

@@ -130,12 +130,17 @@ export async function POST(request: Request) {
     {
       "recordDate": "YYYY-MM-DD",
       "category": "FOOD|MEDICAL|GROOMING|SUPPLIES|INSURANCE|OTHER",
-      "description": "花費描述（如：狗罐頭180g）",
-      "amount": 180,
+      "description": "花費描述，直接取產品/服務名稱（如：狗罐頭、貓砂、獸醫費用）",
+      "amount": 300,
       "notes": "備註（可選）"
     }
   ]
 }
+
+重要：當用戶說「狗罐頭花了300」或「買了XXX花了OO元」時：
+1. description = "狗罐頭"（只取產品名稱，不要包含「花了」或「花了OOO元」）
+2. amount = 300（只取數字）
+3. category = "FOOD"（因為是寵物食品）
 
 只回傳 JSON，不要有其他文字。`;
 
