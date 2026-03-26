@@ -6,7 +6,6 @@ import { useUserStore } from '@/stores/user-store';
 
 export default function HealthPage() {
   const router = useRouter();
-  const { activePet } = useUserStore();
   const pets = useUserStore((state) => state.pets) || [];
   const currentPetId = useUserStore((state) => state.currentPetId);
   const pet = pets.find((p) => p.id === currentPetId) || pets[0];
