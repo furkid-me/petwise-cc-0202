@@ -124,27 +124,32 @@ export default function HomePage() {
         }
 
         // 取得本月花費（所有寵物的總和）
-        const now = new Date();
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-        
-        const expenseUrl = new URL('/api/expense-records', window.location.origin);
-        expenseUrl.searchParams.append('startDate', firstDayOfMonth);
-        expenseUrl.searchParams.append('endDate', lastDayOfMonth);
-        
-        const expenseResponse = await fetch(expenseUrl.toString(), {
-          headers: { 'Authorization': `Bearer ${token}` },
-          signal: abortController.signal,
-        });
-        
-        if (!isMounted) return;
-        
-        if (expenseResponse.ok) {
-          const expenseData = await expenseResponse.json();
-          const expenses = Array.isArray(expenseData) ? expenseData : [];
-          setMonthlyExpenses(expenses);
-          const total = expenses.reduce((sum: number, e: ExpenseRecord) => sum + (Number(e?.amount) || 0), 0);
-          setTotalMonthlyExpense(total);
+        try {
+          const now = new Date();
+          const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+          const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+          
+          const expenseUrl = new URL('/api/expense-records', window.location.origin);
+          expenseUrl.searchParams.append('startDate', firstDayOfMonth);
+          expenseUrl.searchParams.append('endDate', lastDayOfMonth);
+          
+          const expenseResponse = await fetch(expenseUrl.toString(), {
+            headers: { 'Authorization': `Bearer ${token}` },
+            signal: abortController.signal,
+          });
+          
+          if (!isMounted) return;
+          
+          if (expenseResponse.ok) {
+            const expenseData = await expenseResponse.json();
+            const expenses = Array.isArray(expenseData) ? expenseData : [];
+            setMonthlyExpenses(expenses);
+            const total = expenses.reduce((sum: number, e: ExpenseRecord) => sum + (Number(e?.amount) || 0), 0);
+            setTotalMonthlyExpense(total);
+          }
+        } catch (expenseErr) {
+          console.warn('Expense fetch error (ignored):', expenseErr);
+          // Don't set error state for expense - it's not critical
         }
       } catch (err: any) {
         if (err.name === 'AbortError') return;
