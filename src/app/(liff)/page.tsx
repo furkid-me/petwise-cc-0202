@@ -68,6 +68,9 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+    
     const fetchData = async () => {
       if (!user || !activePet) {
         setLoadingRecords(false);
@@ -76,6 +79,10 @@ export default function HomePage() {
       setLoadingRecords(true);
       try {
         const token = localStorage.getItem('petwise_jwt');
+        if (!token) {
+          if (isMounted) setLoadingRecords(false);
+          return;
+        }
 
         const today = new Date().toISOString().split('T')[0];
         const dietUrl = new URL('/api/diet-records', window.location.origin);
@@ -84,7 +91,10 @@ export default function HomePage() {
 
         const dietResponse = await fetch(dietUrl.toString(), {
           headers: { 'Authorization': `Bearer ${token}` },
+          signal: abortController.signal,
         });
+
+        if (!isMounted) return;
 
         if (dietResponse.ok) {
           const dietData = await dietResponse.json();
@@ -98,8 +108,10 @@ export default function HomePage() {
         weightUrl.searchParams.append('petId', activePet.id);
         const weightResponse = await fetch(
           weightUrl.toString() + '&limit=1&orderBy=recordDate&order=desc',
-          { headers: { 'Authorization': `Bearer ${token}` } },
+          { headers: { 'Authorization': `Bearer ${token}` }, signal: abortController.signal },
         );
+
+        if (!isMounted) return;
 
         if (weightResponse.ok) {
           const weightData = await weightResponse.json();
@@ -109,9 +121,6 @@ export default function HomePage() {
           } else {
             setLatestWeight(null);
           }
-        } else {
-          const errorData = await weightResponse.json();
-          console.error('Failed to fetch latest weight:', errorData.error);
         }
 
         // 取得本月花費（所有寵物的總和）
@@ -125,7 +134,10 @@ export default function HomePage() {
         
         const expenseResponse = await fetch(expenseUrl.toString(), {
           headers: { 'Authorization': `Bearer ${token}` },
+          signal: abortController.signal,
         });
+        
+        if (!isMounted) return;
         
         if (expenseResponse.ok) {
           const expenseData = await expenseResponse.json();
@@ -134,15 +146,21 @@ export default function HomePage() {
           const total = expenses.reduce((sum: number, e: ExpenseRecord) => sum + (Number(e?.amount) || 0), 0);
           setTotalMonthlyExpense(total);
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
         console.error('Fetch error:', err);
-        setErrorRecords('載入記錄時發生未知錯誤。');
+        if (isMounted) setErrorRecords('載入記錄時發生未知錯誤。');
       } finally {
-        setLoadingRecords(false);
+        if (isMounted) setLoadingRecords(false);
       }
     };
 
     fetchData();
+    
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, [user?.id, activePet?.id]);
 
   if (!user || !activePet) {
