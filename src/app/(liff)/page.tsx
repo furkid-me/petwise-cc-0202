@@ -131,7 +131,7 @@ export default function HomePage() {
           const expenseData = await expenseResponse.json();
           const expenses = Array.isArray(expenseData) ? expenseData : [];
           setMonthlyExpenses(expenses);
-          const total = expenses.reduce((sum: number, e: ExpenseRecord) => sum + Number(e.amount), 0);
+          const total = expenses.reduce((sum: number, e: ExpenseRecord) => sum + (Number(e?.amount) || 0), 0);
           setTotalMonthlyExpense(total);
         }
       } catch (err) {
