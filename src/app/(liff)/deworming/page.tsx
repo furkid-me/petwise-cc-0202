@@ -44,9 +44,10 @@ export default function DewormingPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        // Filter only DEWORMING type reminders
-        const dewormingRecords = (Array.isArray(data) ? data : data.data || []).filter(
-          (r: any) => r.type === 'DEWORMING' || r.type === 'deworming'
+        // Filter only DEWORMING category reminders
+        const allReminders = Array.isArray(data) ? data : (data.data || []);
+        const dewormingRecords = allReminders.filter(
+          (r: any) => r.category === 'DEWORMING'
         );
         setRecords(dewormingRecords);
       } else {

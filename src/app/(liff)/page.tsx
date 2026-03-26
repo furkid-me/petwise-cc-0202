@@ -88,7 +88,7 @@ export default function HomePage() {
 
         if (dietResponse.ok) {
           const dietData = await dietResponse.json();
-          setTodayDietRecordsData(Array.isArray(dietData) ? dietData : []);
+          setTodayDietRecordsData(Array.isArray(dietData) ? dietData : (dietData.dietRecords || []));
         } else {
           const errorData = await dietResponse.json();
           setErrorRecordsData(errorData.error || '載入本日飲食記錄失敗。');
@@ -103,8 +103,9 @@ export default function HomePage() {
 
         if (weightResponse.ok) {
           const weightData = await weightResponse.json();
-          if (Array.isArray(weightData) && weightData.length > 0) {
-            setLatestWeight(weightData[0]);
+          const weightRecords = Array.isArray(weightData) ? weightData : (weightData.weightRecords || []);
+          if (weightRecords.length > 0) {
+            setLatestWeight(weightRecords[0]);
           } else {
             setLatestWeight(null);
           }
