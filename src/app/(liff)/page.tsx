@@ -160,11 +160,13 @@ export default function HomePage() {
   const totalKcalConsumed = safeRecords.reduce((sum, record) => sum + (record.totalKcal || 0), 0);
   const totalWaterConsumed = safeRecords.reduce((sum, record) => sum + (record.drankWaterMl || 0), 0);
 
-  const kcalProgress = activePet.dailyKcalTarget
-    ? Math.min((totalKcalConsumed / activePet.dailyKcalTarget) * 100, 100)
+  const kcalTarget = activePet?.dailyKcalTarget ?? 0;
+  const waterTarget = activePet?.dailyWaterMlTarget ?? 0;
+  const kcalProgress = kcalTarget > 0
+    ? Math.min((totalKcalConsumed / kcalTarget) * 100, 100)
     : 0;
-  const waterProgress = activePet.dailyWaterMlTarget
-    ? Math.min((totalWaterConsumed / activePet.dailyWaterMlTarget) * 100, 100)
+  const waterProgress = waterTarget > 0
+    ? Math.min((totalWaterConsumed / waterTarget) * 100, 100)
     : 0;
 
   return (
@@ -201,12 +203,12 @@ export default function HomePage() {
             最新體重：{Number(latestWeight.weightKg).toFixed(1)} kg
           </p>
         )}
-        {activePet.dailyKcalTarget ? (
+        {kcalTarget > 0 ? (
           <div className="mb-3">
             <div className="flex justify-between text-sm text-gray-700 mb-1.5">
               <span>熱量</span>
               <span className="text-gray-400 text-xs tabular-nums">
-                {totalKcalConsumed.toFixed(0)} / {activePet.dailyKcalTarget} kcal
+                {totalKcalConsumed.toFixed(0)} / {kcalTarget} kcal
               </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -221,12 +223,12 @@ export default function HomePage() {
             未設定每日熱量目標，請在寵物檔案中設定。
           </p>
         )}
-        {activePet.dailyWaterMlTarget ? (
+        {waterTarget > 0 ? (
           <div>
             <div className="flex justify-between text-sm text-gray-700 mb-1.5">
               <span>飲水</span>
               <span className="text-gray-400 text-xs tabular-nums">
-                {totalWaterConsumed.toFixed(0)} / {activePet.dailyWaterMlTarget} ml
+                {totalWaterConsumed.toFixed(0)} / {waterTarget} ml
               </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
