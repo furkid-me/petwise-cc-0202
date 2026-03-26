@@ -67,7 +67,7 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Diet fetch - simplified
+  // Diet fetch - with proper error handling
   useEffect(() => {
     if (!user || !activePet) return;
     
@@ -80,13 +80,20 @@ export default function HomePage() {
     fetch('/api/diet-records?petId=' + petId + '&date=' + today, {
       headers: { 'Authorization': 'Bearer ' + token },
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Diet API error: ' + res.status);
+        }
+        return res.json();
+      })
       .then(data => {
         if (Array.isArray(data?.dietRecords)) {
           setTodayDietRecords(data.dietRecords);
         }
       })
-      .catch(e => console.warn('Diet error:', e));
+      .catch(e => {
+        console.warn('Diet fetch error (ignored):', e.message);
+      });
   }, [user?.id]);
 
   if (!user || !activePet) {
