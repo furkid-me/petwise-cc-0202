@@ -67,21 +67,30 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Test JSON parsing of diet records
+  // Test diet records with proper error handling
   useEffect(() => {
-    if (!user) return;
+    if (!user || !activePet) return;
     
     const token = localStorage.getItem('petwise_jwt');
     if (!token) return;
     
+    setLoadingRecords(true);
+    
     fetch('/api/diet-records', {
       headers: { 'Authorization': 'Bearer ' + token },
     })
-      .then(res => res.json())
-      .then(data => {
-        console.log('Diet JSON parsed:', data);
+      .then(res => {
+        console.log('Diet status:', res.status);
+        return res.json();
       })
-      .catch(err => console.log('Diet JSON error:', err));
+      .then(data => {
+        console.log('Diet data:', data);
+        setLoadingRecords(false);
+      })
+      .catch(err => {
+        console.log('Diet error:', err);
+        setLoadingRecords(false);
+      });
   }, []);
 
   if (!user || !activePet) {
