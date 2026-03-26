@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserStore } from '@/stores/user-store';
 
 export default function NewMedicationRecordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/medication-records';
   const { user, currentPetId } = useUserStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export default function NewMedicationRecordPage() {
         throw new Error(errorData.error || '新增失敗');
       }
 
-      router.push('/medication-records');
+      router.push(redirect);
     } catch (err: any) {
       setError(err.message || '新增失敗，請重試');
     } finally {

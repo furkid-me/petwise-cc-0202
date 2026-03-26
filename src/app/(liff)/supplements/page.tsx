@@ -89,7 +89,7 @@ export default function SupplementsPage() {
             <p className="text-gray-400">還沒有營養品記錄</p>
             <p className="text-sm text-gray-400 mt-2">在「用藥記錄」中新增保健品</p>
             <button
-              onClick={() => router.push('/medication-records/new')}
+              onClick={() => router.push('/medication-records/new?redirect=/supplements')}
               className="mt-4 bg-amber-500 text-white px-6 py-2 rounded-full"
             >
               + 新增營養品
