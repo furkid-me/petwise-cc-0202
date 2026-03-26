@@ -32,6 +32,16 @@ interface WeightRecord {
   notes?: string | null;
 }
 
+interface ExpenseRecord {
+  id: string;
+  petId: string;
+  recordDate: string;
+  category: string;
+  description: string;
+  amount: number;
+  notes: string | null;
+}
+
 export default function HomePage() {
   const router = useRouter();
   const { user, currentPetId, pets: rawPets } = useUserStore();
@@ -42,6 +52,8 @@ export default function HomePage() {
   const [latestWeight, setLatestWeight] = useState<WeightRecord | null>(null);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [errorRecords, setErrorRecords] = useState<string | null>(null);
+  const [monthlyExpenses, setMonthlyExpenses] = useState<ExpenseRecord[]>([]);
+  const [totalMonthlyExpense, setTotalMonthlyExpense] = useState<number>(0);
 
   const formattedDate = new Date().toLocaleDateString('zh-TW', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
@@ -99,6 +111,28 @@ export default function HomePage() {
         } else {
           const errorData = await weightResponse.json();
           console.error('Failed to fetch latest weight:', errorData.error);
+        }
+
+        // 取得本月花費
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        
+        const expenseUrl = new URL('/api/expense-records', window.location.origin);
+        expenseUrl.searchParams.append('petId', activePet.id);
+        expenseUrl.searchParams.append('startDate', firstDayOfMonth);
+        expenseUrl.searchParams.append('endDate', lastDayOfMonth);
+        
+        const expenseResponse = await fetch(expenseUrl.toString(), {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        if (expenseResponse.ok) {
+          const expenseData = await expenseResponse.json();
+          const expenses = Array.isArray(expenseData) ? expenseData : [];
+          setMonthlyExpenses(expenses);
+          const total = expenses.reduce((sum: number, e: ExpenseRecord) => sum + Number(e.amount), 0);
+          setTotalMonthlyExpense(total);
         }
       } catch (err) {
         console.error('Fetch error:', err);
@@ -206,6 +240,52 @@ export default function HomePage() {
           <p className="text-sm text-gray-500 leading-7 text-pretty">
             未設定每日飲水目標，請在寵物檔案中設定。
           </p>
+        )}
+      </div>
+
+      {/* 本月花費卡片 */}
+      <div className="-mt-2 mx-4 bg-white rounded-2xl ring-1 ring-gray-950/10 p-4 mb-3">
+        <div className="flex justify-between items-center mb-2">
+          <p className="font-mono text-xs uppercase tracking-wider text-gray-400">
+            本月花費
+          </p>
+          <button
+            onClick={() => router.push('/expenses')}
+            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            詳情 →
+          </button>
+        </div>
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-2xl font-bold text-gray-800">
+              NT$ {totalMonthlyExpense.toLocaleString('zh-TW', { minimumFractionDigits: 0 })}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })}
+            </p>
+          </div>
+          <div className="text-right">
+            {monthlyExpenses.length > 0 && (
+              <p className="text-xs text-gray-500">
+                {monthlyExpenses.length} 筆記錄
+              </p>
+            )}
+          </div>
+        </div>
+        {/* 花費類別小標籤 */}
+        {monthlyExpenses.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-3">
+            {Array.from(new Set(monthlyExpenses.map((e: ExpenseRecord) => e.category))).slice(0, 4).map((cat: string) => (
+              <span key={cat} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                {cat === 'FOOD' ? '🍖 飼料' :
+                 cat === 'MEDICAL' ? '🏥 醫療' :
+                 cat === 'GROOMING' ? '✂️ 美容' :
+                 cat === 'SUPPLIES' ? '📦 用品' :
+                 cat === 'INSURANCE' ? '🛡️ 保險' : '其他'}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
