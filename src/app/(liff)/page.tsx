@@ -67,13 +67,13 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // No fetch - just test setTimeout
+  // Simple test with fetch
   useEffect(() => {
     setLoadingRecords(false);
-    const timer = setTimeout(() => {
-      console.log('Timer fired, page is stable');
-    }, 1000);
-    return () => clearTimeout(timer);
+    
+    fetch('/api/pets', { headers: { Authorization: 'Bearer test' } })
+      .then(() => console.log('Fetch completed'))
+      .catch(e => console.warn('Fetch error:', e));
   }, []);
 
   if (!user || !activePet) {
