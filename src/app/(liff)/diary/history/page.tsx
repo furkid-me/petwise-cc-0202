@@ -391,6 +391,7 @@ export default function DiaryHistoryPage() {
                   <DiaryCard
                     key={diary.id}
                     diary={diary}
+                    onClick={() => router.push(`/diary/${diary.id}`)}
                     onDelete={(diaryId) => {
                       setDiaries(diaries.filter((d) => d.id !== diaryId));
                     }}
