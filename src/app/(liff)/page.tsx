@@ -109,20 +109,20 @@ export default function HomePage() {
       }
 
       try {
-        // Fetch expenses
-        const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-        const expenseRes = await fetch(`/api/expense-records?startDate=${monthStart}&endDate=${monthEnd}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (expenseRes.ok) {
-          const data = await expenseRes.json();
-          const expenses = Array.isArray(data) ? data : [];
-          setMonthlyExpenses(expenses);
-          const total = expenses.reduce((sum, e) => sum + (Number(e?.amount) || 0), 0);
-          setTotalMonthlyExpense(total);
-        }
+        // Fetch expenses - temporarily disabled due to crashes
+        // const now = new Date();
+        // const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        // const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        // const expenseRes = await fetch(`/api/expense-records?startDate=${monthStart}&endDate=${monthEnd}`, {
+        //   headers: { Authorization: `Bearer ${token}` },
+        // });
+        // if (expenseRes.ok) {
+        //   const data = await expenseRes.json();
+        //   const expenses = Array.isArray(data) ? data : [];
+        //   setMonthlyExpenses(expenses);
+        //   const total = expenses.reduce((sum, e) => sum + (Number(e?.amount) || 0), 0);
+        //   setTotalMonthlyExpense(total);
+        // }
       } catch (e) {
         console.warn('Expense error:', e);
       }
