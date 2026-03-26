@@ -151,7 +151,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Help */}
-      <Card className="mb-4">
+      <Card className="mb-4 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => alert('📖 PetWise 使用說明\n\n直接傳訊息給機器人即可記錄！\n\n範例：\n• 今天麻糬吃了飼料\n• 體重 5.2 公斤\n• 狗罐頭花了300\n\n點擊左下角選單可瀏覽所有功能。')}>
         <CardContent className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <HelpCircle className="h-5 w-5 text-muted-foreground" />

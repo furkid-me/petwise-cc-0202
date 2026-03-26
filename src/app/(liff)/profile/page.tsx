@@ -50,7 +50,15 @@ export default function ProfilePage() {
 
           {/* 基本資料卡片 */}
           <div className="w-full bg-gray-950/[0.025] ring-1 ring-inset ring-gray-950/5 rounded-2xl p-4">
-            <p className="font-mono text-xs uppercase tracking-wider text-gray-400 mb-3">基本資料</p>
+            <div className="flex justify-between items-center mb-3">
+              <p className="font-mono text-xs uppercase tracking-wider text-gray-400">基本資料</p>
+              <button
+                onClick={() => router.push('/settings')}
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                編輯
+              </button>
+            </div>
             <InfoRow label="LINE 名稱" value={user.displayName} />
             <InfoRow label="真實姓名" value={user.realName} />
             <InfoRow label="電子郵件" value={user.email} />
