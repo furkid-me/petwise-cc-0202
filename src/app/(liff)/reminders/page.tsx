@@ -71,9 +71,12 @@ export default function RemindersPage() {
             };
           });
           setReminders(normalised);
+        } else if (response.status === 401) {
+          setError('未授權，請重新登入。');
         } else {
-          const errorData = await response.json();
-          setError(errorData.error || '載入提醒列表失敗。');
+          const errorText = await response.text();
+          console.error('Fetch reminders error:', response.status, errorText);
+          setError(`載入提醒列表失敗 (${response.status})`);
         }
       } catch (err) {
         console.error('Fetch reminders error:', err);
