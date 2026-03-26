@@ -278,11 +278,11 @@ export default function HomePage() {
           </svg>
           <span className="text-xs">飲食</span>
         </button>
-        <button onClick={() => router.push('/weight')} className="flex flex-col items-center text-gray-400 hover:text-indigo-600 transition-colors">
+        <button onClick={() => router.push('/health')} className="flex flex-col items-center text-gray-400 hover:text-indigo-600 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
-          <span className="text-xs">照護</span>
+          <span className="text-xs">健康</span>
         </button>
         <button onClick={() => router.push('/reminders')} className="flex flex-col items-center text-gray-400 hover:text-indigo-600 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
