@@ -67,41 +67,42 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Diet fetch - with ref to prevent multiple runs
+  // Diet fetch - capture values to avoid closure issues
   useEffect(() => {
-    let cancelled = false;
-    let ignoreAfterFetch = false;
+    if (!user) return;
     
-    if (!user || !activePet) return;
-    
+    const userId = user.id;
     const token = localStorage.getItem('petwise_jwt');
     if (!token) return;
     
-    const petId = activePet.id;
+    // Get activePet outside of async function
+    const currentPetId = useUserStore.getState().currentPetId;
+    const pets = useUserStore.getState().pets || [];
+    const pet = pets.find(p => p.id === currentPetId) || pets[0];
+    if (!pet) return;
+    
+    const petId = pet.id;
     const today = new Date().toISOString().split('T')[0];
     
-    fetch('/api/diet-records?petId=' + petId + '&date=' + today, {
-      headers: { 'Authorization': 'Bearer ' + token },
-    })
-      .then(res => {
-        if (cancelled || ignoreAfterFetch) return null;
-        if (!res.ok) throw new Error('Status: ' + res.status);
-        return res.json();
-      })
-      .then(data => {
-        if (cancelled || ignoreAfterFetch) return;
-        if (data && Array.isArray(data.dietRecords)) {
-          setTodayDietRecords(data.dietRecords);
+    const loadData = async () => {
+      try {
+        const response = await fetch('/api/diet-records?petId=' + petId + '&date=' + today, {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.dietRecords) {
+            setTodayDietRecords(data.dietRecords);
+          }
         }
-      })
-      .catch(e => {
-        if (!cancelled) console.warn('Diet fetch error:', e.message);
-      });
-    
-    return () => {
-      cancelled = true;
+      } catch (error) {
+        console.warn('Load error:', error);
+      }
     };
-  }, [user?.id, activePet?.id]);
+    
+    loadData();
+  }, []);
 
   if (!user || !activePet) {
     return (
