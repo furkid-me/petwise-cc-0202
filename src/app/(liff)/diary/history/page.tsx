@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Filter, Calendar, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,7 @@ const categories: { value: DiaryCategory | 'ALL'; label: string }[] = [
 ];
 
 export default function DiaryHistoryPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const dateParam = searchParams.get('date');
 
