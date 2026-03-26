@@ -67,16 +67,22 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Minimal fetch test - no state update
+  // Test /api/diet-records fetch
   useEffect(() => {
     if (!user) return;
     
-    fetch('/api/pets', {
-      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('petwise_jwt') || '') },
+    const token = localStorage.getItem('petwise_jwt');
+    if (!token) return;
+    
+    fetch('/api/diet-records', {
+      headers: { 'Authorization': 'Bearer ' + token },
     })
-      .then(res => res.json())
-      .then(data => console.log('Pets API:', data))
-      .catch(err => console.log('Fetch error:', err));
+      .then(res => {
+        console.log('Diet response status:', res.status);
+        return res.text();
+      })
+      .then(text => console.log('Diet response:', text.substring(0, 100)))
+      .catch(err => console.log('Diet error:', err));
   }, []);
 
   if (!user || !activePet) {
