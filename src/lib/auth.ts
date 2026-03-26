@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import prisma from './prisma';
+import jwt from 'jsonwebtoken';
 import type { User } from '@/types';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key';
 
 const LINE_VERIFY_URL = 'https://api.line.me/oauth2/v2.1/verify';
 const LINE_PROFILE_URL = 'https://api.line.me/v2/profile';
@@ -78,7 +81,7 @@ export async function getOrCreateUser(profile: LineProfile): Promise<User> {
   return user;
 }
 
-// Get current user from request (using LINE access token)
+// Get current user from request (using JWT token)
 export async function getCurrentUser(request: NextRequest): Promise<User | null> {
   const authHeader = request.headers.get('authorization');
 
@@ -86,20 +89,22 @@ export async function getCurrentUser(request: NextRequest): Promise<User | null>
     return null;
   }
 
-  const accessToken = authHeader.slice(7);
+  const token = authHeader.slice(7);
 
-  // Verify LINE token
-  const profile = await verifyLineToken(accessToken);
-  if (!profile) {
+  try {
+    // Verify our own JWT token
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; lineUserId: string };
+    
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    return user;
+  } catch (err) {
+    console.error('JWT verification failed:', err);
     return null;
   }
-
-  // Get user from database
-  const user = await prisma.user.findUnique({
-    where: { lineUserId: profile.userId },
-  });
-
-  return user;
 }
 
 // Check subscription limits
