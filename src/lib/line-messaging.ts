@@ -399,8 +399,8 @@ export function buildDiaryConfirmMessage(
             height: 'sm',
             action: {
               type: 'uri',
-              label: '查看日記',
-              uri: getLiffUrl('/diary/history'),
+              label: '查看首頁',
+              uri: getLiffUrl('/'),
             },
           },
           {
@@ -409,8 +409,8 @@ export function buildDiaryConfirmMessage(
             height: 'sm',
             action: {
               type: 'uri',
-              label: '查看統計',
-              uri: getLiffUrl('/stats'),
+              label: '新增記錄',
+              uri: getLiffUrl('/diary/new'),
             },
           },
         ],
@@ -553,8 +553,8 @@ export function buildTodaySummaryMessage(
             color: '#6366f1',
             action: {
               type: 'uri',
-              label: '查看完整統計',
-              uri: getLiffUrl('/stats'),
+              label: '查看健康頁面',
+              uri: getLiffUrl('/health'),
             },
           },
         ],
