@@ -261,7 +261,7 @@ export default function HomePage() {
         <div className="flex items-end justify-between">
           <div>
             <p className="text-2xl font-bold text-gray-800">
-              NT$ {totalMonthlyExpense.toLocaleString('zh-TW', { minimumFractionDigits: 0 })}
+              NT$ {(totalMonthlyExpense || 0).toLocaleString('zh-TW', { minimumFractionDigits: 0 })}
             </p>
             <p className="text-xs text-gray-400 mt-1">
               {new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })}
@@ -330,9 +330,9 @@ export default function HomePage() {
                     )}
                   </div>
                   <div className="text-right">
-                    {record.totalKcal !== null && (
+                    {record.totalKcal != null && (
                       <p className="text-xs text-emerald-600 font-medium tabular-nums">
-                        {record.totalKcal?.toFixed(0)} kcal
+                        {(record.totalKcal || 0).toFixed(0)} kcal
                       </p>
                     )}
                     {record.drankWaterMl !== null && (
