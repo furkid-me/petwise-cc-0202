@@ -67,7 +67,7 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Test /api/diet-records fetch
+  // Test JSON parsing of diet records
   useEffect(() => {
     if (!user) return;
     
@@ -77,12 +77,11 @@ export default function HomePage() {
     fetch('/api/diet-records', {
       headers: { 'Authorization': 'Bearer ' + token },
     })
-      .then(res => {
-        console.log('Diet response status:', res.status);
-        return res.text();
+      .then(res => res.json())
+      .then(data => {
+        console.log('Diet JSON parsed:', data);
       })
-      .then(text => console.log('Diet response:', text.substring(0, 100)))
-      .catch(err => console.log('Diet error:', err));
+      .catch(err => console.log('Diet JSON error:', err));
   }, []);
 
   if (!user || !activePet) {
