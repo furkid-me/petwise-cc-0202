@@ -67,12 +67,14 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Test 1: Only diet fetch
+  // Test 1: Only diet fetch - capture petId to avoid closure issues
   useEffect(() => {
     if (!user || !activePet) {
       setLoadingRecords(false);
       return;
     }
+    
+    const petId = activePet.id;
     
     const loadDiet = async () => {
       const token = localStorage.getItem('petwise_jwt');
@@ -80,12 +82,15 @@ export default function HomePage() {
       
       try {
         const today = new Date().toISOString().split('T')[0];
-        const dietRes = await fetch(`/api/diet-records?petId=${activePet.id}&date=${today}`, {
+        const dietRes = await fetch(`/api/diet-records?petId=${petId}&date=${today}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        
         if (dietRes.ok) {
           const data = await dietRes.json();
-          setTodayDietRecords(data.dietRecords || []);
+          if (data.dietRecords && Array.isArray(data.dietRecords)) {
+            setTodayDietRecords(data.dietRecords);
+          }
         }
       } catch (e) {
         console.warn('Diet error:', e);
