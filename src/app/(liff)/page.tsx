@@ -67,14 +67,39 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Simple test with fetch
+  // Diet fetch test
   useEffect(() => {
-    setLoadingRecords(false);
+    if (!user || !activePet) {
+      setLoadingRecords(false);
+      return;
+    }
     
-    fetch('/api/pets', { headers: { Authorization: 'Bearer test' } })
-      .then(() => console.log('Fetch completed'))
-      .catch(e => console.warn('Fetch error:', e));
-  }, []);
+    const token = localStorage.getItem('petwise_jwt');
+    if (!token) {
+      setLoadingRecords(false);
+      return;
+    }
+    
+    setLoadingRecords(true);
+    
+    const today = new Date().toISOString().split('T')[0];
+    const url = '/api/diet-records?petId=' + activePet.id + '&date=' + today;
+    
+    fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + token },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.dietRecords) {
+          setTodayDietRecords(data.dietRecords);
+        }
+        setLoadingRecords(false);
+      })
+      .catch(e => {
+        console.warn('Diet fetch error:', e);
+        setLoadingRecords(false);
+      });
+  }, [user?.id, activePet?.id]);
 
   if (!user || !activePet) {
     return (
