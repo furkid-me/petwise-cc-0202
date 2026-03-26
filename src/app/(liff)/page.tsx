@@ -67,9 +67,33 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // All fetch temporarily disabled - testing if UI itself causes crash
+  // Test 1: Only diet fetch
   useEffect(() => {
-    setLoadingRecords(false);
+    if (!user || !activePet) {
+      setLoadingRecords(false);
+      return;
+    }
+    
+    const loadDiet = async () => {
+      const token = localStorage.getItem('petwise_jwt');
+      if (!token) return;
+      
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const dietRes = await fetch(`/api/diet-records?petId=${activePet.id}&date=${today}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (dietRes.ok) {
+          const data = await dietRes.json();
+          setTodayDietRecords(data.dietRecords || []);
+        }
+      } catch (e) {
+        console.warn('Diet error:', e);
+      }
+      setLoadingRecords(false);
+    };
+    
+    loadDiet();
   }, [user?.id, activePet?.id]);
 
   if (!user || !activePet) {
