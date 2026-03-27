@@ -175,7 +175,7 @@ export default function HomePage() {
             <div className="flex justify-between text-sm text-gray-700 mb-1.5">
               <span>熱量</span>
               <span className="text-gray-400 text-xs tabular-nums">
-                {Number(totalKcalConsumed || 0).toFixed(0)} / {kcalTarget} kcal
+                {Number(totalKcalConsumed || 0).toFixed(0)} / {Number(kcalTarget || 0)} kcal
               </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -195,7 +195,7 @@ export default function HomePage() {
             <div className="flex justify-between text-sm text-gray-700 mb-1.5">
               <span>飲水</span>
               <span className="text-gray-400 text-xs tabular-nums">
-                {Number(totalWaterConsumed || 0).toFixed(0)} / {waterTarget} ml
+                {Number(totalWaterConsumed || 0).toFixed(0)} / {Number(waterTarget || 0)} ml
               </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
