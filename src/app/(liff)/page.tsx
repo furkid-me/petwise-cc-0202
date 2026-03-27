@@ -167,7 +167,7 @@ export default function HomePage() {
         </p>
         {latestWeight && (
           <p className="text-xs text-indigo-600 font-medium mb-3">
-            最新體重：{Number(latestWeight.weightKg).toFixed(1)} kg
+            最新體重：{(Number(latestWeight?.weightKg) || 0).toFixed(1)} kg
           </p>
         )}
         {kcalTarget > 0 ? (
@@ -175,7 +175,7 @@ export default function HomePage() {
             <div className="flex justify-between text-sm text-gray-700 mb-1.5">
               <span>熱量</span>
               <span className="text-gray-400 text-xs tabular-nums">
-                {totalKcalConsumed.toFixed(0)} / {kcalTarget} kcal
+                {(totalKcalConsumed || 0).toFixed(0)} / {kcalTarget} kcal
               </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -195,7 +195,7 @@ export default function HomePage() {
             <div className="flex justify-between text-sm text-gray-700 mb-1.5">
               <span>飲水</span>
               <span className="text-gray-400 text-xs tabular-nums">
-                {totalWaterConsumed.toFixed(0)} / {waterTarget} ml
+                {(totalWaterConsumed || 0).toFixed(0)} / {waterTarget} ml
               </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
