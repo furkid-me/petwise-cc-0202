@@ -169,14 +169,9 @@ export async function POST(request: Request) {
       expenseRecords: [],
     };
 
-    let parsedData = mockData;
-    
-    console.log('Mock data dietRecords:', JSON.stringify(mockData.dietRecords));
-    console.log('Diet records length:', mockData.dietRecords.length);
-    
-    /*
-    // 正式版：使用 OpenAI
+    let parsedData: any;
     try {
+      // 使用 OpenAI 解析
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -203,8 +198,17 @@ export async function POST(request: Request) {
       }
     } catch (openaiErr) {
       console.error('OpenAI error:', openaiErr);
+      parsedData = {
+        dietRecords: [],
+        weightRecords: [],
+        reminders: [],
+        dailyTasks: [],
+        medicalRecords: [],
+        medicationRecords: [],
+        examinationRecords: [],
+        expenseRecords: [],
+      };
     }
-    */
 
     const {
       dietRecords = [],
@@ -219,9 +223,26 @@ export async function POST(request: Request) {
 
     let createdRecords = 0;
 
-    // 測試：直接設為 1
-    createdRecords = 1;
-    console.log('Test: createdRecords set to 1');
+    // 儲存飲食記錄
+    if (dietRecords.length > 0) {
+      try {
+        const dietData = dietRecords.map((r: any) => ({
+          userId: decodedToken.userId,
+          petId,
+          recordedAt: r.recordedAt ? new Date(r.recordedAt) : new Date(),
+          foodName: r.foodName || r.mealTime || 'Unknown',
+          foodType: r.foodType || 'OTHER',
+          amountValue: Number(r.quantity || r.amountValue || 0),
+          amountUnit: r.unit || 'g',
+          mainIngredients: [],
+          notes: r.notes || null,
+        }));
+        await prisma.dietRecord.createMany({ data: dietData });
+        createdRecords += dietRecords.length;
+      } catch (dietErr: any) {
+        console.error('Diet save error:', dietErr.message, dietErr.code);
+      }
+    }
 
     // 儲存體重記錄
     if (weightRecords.length > 0) {
