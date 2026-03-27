@@ -149,31 +149,57 @@ export async function POST(request: Request) {
 
 只回傳 JSON，不要有其他文字。`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: text },
-      ],
-      temperature: 0.1,
-    });
+    // 測試用：跳過 OpenAI，直接返回模擬資料
+    const mockData = {
+      dietRecords: [{
+        mealTime: '早上的',
+        foodType: '罐頭',
+        quantity: 20,
+        unit: 'g',
+        notes: '測試'
+      }],
+      weightRecords: [],
+      reminders: [],
+      dailyTasks: [],
+      medicalRecords: [],
+      medicationRecords: [],
+      examinationRecords: [],
+      expenseRecords: [],
+    };
 
-    const responseText = completion.choices[0].message.content || '{}';
-    let parsedData: any;
+    let parsedData = mockData;
+    
+    /*
+    // 正式版：使用 OpenAI
     try {
-      parsedData = JSON.parse(responseText);
-    } catch {
-      parsedData = {
-        dietRecords: [],
-        weightRecords: [],
-        reminders: [],
-        dailyTasks: [],
-        medicalRecords: [],
-        medicationRecords: [],
-        examinationRecords: [],
-        expenseRecords: [],
-      };
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text },
+        ],
+        temperature: 0.1,
+      });
+
+      const responseText = completion.choices[0].message.content || '{}';
+      try {
+        parsedData = JSON.parse(responseText);
+      } catch {
+        parsedData = {
+          dietRecords: [],
+          weightRecords: [],
+          reminders: [],
+          dailyTasks: [],
+          medicalRecords: [],
+          medicationRecords: [],
+          examinationRecords: [],
+          expenseRecords: [],
+        };
+      }
+    } catch (openaiErr) {
+      console.error('OpenAI error:', openaiErr);
     }
+    */
 
     const {
       dietRecords = [],
