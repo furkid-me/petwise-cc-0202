@@ -50,7 +50,7 @@ export default function HomePage() {
 
   const [todayDietRecords, setTodayDietRecords] = useState<DietRecord[]>([]);
   const [latestWeight, setLatestWeight] = useState<WeightRecord | null>(null);
-  const [loadingRecords, setLoadingRecords] = useState(true);
+  const [loadingRecords, setLoadingRecords] = useState(false);
   const [errorRecords, setErrorRecords] = useState<string | null>(null);
   const [monthlyExpenses, setMonthlyExpenses] = useState<ExpenseRecord[]>([]);
   const [totalMonthlyExpense, setTotalMonthlyExpense] = useState<number>(0);
