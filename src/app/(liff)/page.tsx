@@ -67,55 +67,11 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Diet fetch - stable version with proper cleanup
+  // NO FETCH - testing if render is stable
   useEffect(() => {
-    if (!user || !activePet) {
-      setLoadingRecords(false);
-      return;
-    }
-    
-    // Capture values to avoid closure issues
-    const petId = activePet.id;
-    const userId = user.id;
-    const token = localStorage.getItem('petwise_jwt');
-    
-    if (!token) {
-      setLoadingRecords(false);
-      return;
-    }
-    
-    let isCancelled = false;
-    
-    const loadData = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const response = await fetch('/api/diet-records?petId=' + petId + '&date=' + today, {
-          headers: { 'Authorization': 'Bearer ' + token },
-        });
-        
-        if (isCancelled) return;
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (!isCancelled && data?.dietRecords) {
-            setTodayDietRecords(data.dietRecords);
-          }
-        }
-      } catch (error) {
-        console.warn('Load error:', error);
-      } finally {
-        if (!isCancelled) {
-          setLoadingRecords(false);
-        }
-      }
-    };
-    
-    loadData();
-    
-    return () => {
-      isCancelled = true;
-    };
-  }, []);  // Empty deps - only run once on mount
+    // Empty - no fetch
+    setLoadingRecords(false);
+  }, []);
 
   if (!user || !activePet) {
     return (
