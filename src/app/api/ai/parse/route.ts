@@ -216,31 +216,25 @@ export async function POST(request: Request) {
 
     let createdRecords = 0;
 
-    // 儲存飲食記錄
+    // 儲存飲食記錄 - 使用最簡單的測試資料
     if (dietRecords.length > 0) {
       try {
-        const dietData = dietRecords.map((r: any) => {
-          // 確保數值是 number 類型
-          const amountValue = typeof r.quantity === 'number' 
-            ? r.quantity 
-            : (typeof r.quantity === 'string' ? parseFloat(r.quantity) : 0);
-          
-          return {
-            userId: decodedToken.userId,
-            petId,
-            recordedAt: r.recordedAt ? new Date(r.recordedAt) : new Date(),
-            foodName: r.foodName || r.mealTime || 'Unknown',
-            foodType: r.foodType || 'OTHER',
-            amountValue,
-            amountUnit: r.unit || 'g',
-            mainIngredients: [],
-            notes: r.notes || null,
-          };
-        });
-        console.log('Creating diet records:', JSON.stringify(dietData));
-        await prisma.dietRecord.createMany({ data: dietData });
-        createdRecords += dietRecords.length;
-        console.log('Diet records created successfully!');
+        // 直接建立一筆記錄測試
+        const testRecord = {
+          userId: decodedToken.userId,
+          petId,
+          recordedAt: new Date(),
+          foodName: '測試罐頭',
+          foodType: 'OTHER',
+          amountValue: 20,
+          amountUnit: 'g',
+          mainIngredients: [],
+          notes: '測試',
+        };
+        console.log('Creating test diet record:', JSON.stringify(testRecord));
+        await prisma.dietRecord.create({ data: testRecord });
+        createdRecords = 1;
+        console.log('Test diet record created!');
       } catch (dietErr: any) {
         console.error('Diet save error:', dietErr.message, dietErr.code, dietErr.meta);
       }
