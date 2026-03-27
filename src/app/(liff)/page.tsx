@@ -67,31 +67,9 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Test diet records with safe state update
+  // NO FETCH - for testing
   useEffect(() => {
-    if (!user || !activePet) return;
-    
-    const token = localStorage.getItem('petwise_jwt');
-    if (!token) return;
-    
-    setLoadingRecords(true);
-    
-    fetch('/api/diet-records', {
-      headers: { 'Authorization': 'Bearer ' + token },
-    })
-      .then(res => res.json())
-      .then(data => {
-        console.log('Diet data:', data);
-        const records = data?.dietRecords;
-        if (Array.isArray(records) && records.length > 0) {
-          setTodayDietRecords(records);
-        }
-        setLoadingRecords(false);
-      })
-      .catch(err => {
-        console.log('Diet error:', err);
-        setLoadingRecords(false);
-      });
+    // Empty - no fetch
   }, []);
 
   if (!user || !activePet) {
