@@ -171,6 +171,9 @@ export async function POST(request: Request) {
 
     let parsedData = mockData;
     
+    console.log('Mock data dietRecords:', JSON.stringify(mockData.dietRecords));
+    console.log('Diet records length:', mockData.dietRecords.length);
+    
     /*
     // 正式版：使用 OpenAI
     try {
@@ -216,29 +219,9 @@ export async function POST(request: Request) {
 
     let createdRecords = 0;
 
-    // 儲存飲食記錄 - 使用最簡單的測試資料
-    if (dietRecords.length > 0) {
-      try {
-        // 直接建立一筆記錄測試
-        const testRecord = {
-          userId: decodedToken.userId,
-          petId,
-          recordedAt: new Date(),
-          foodName: '測試罐頭',
-          foodType: 'OTHER',
-          amountValue: 20,
-          amountUnit: 'g',
-          mainIngredients: [],
-          notes: '測試',
-        };
-        console.log('Creating test diet record:', JSON.stringify(testRecord));
-        await prisma.dietRecord.create({ data: testRecord });
-        createdRecords = 1;
-        console.log('Test diet record created!');
-      } catch (dietErr: any) {
-        console.error('Diet save error:', dietErr.message, dietErr.code, dietErr.meta);
-      }
-    }
+    // 測試：直接設為 1
+    createdRecords = 1;
+    console.log('Test: createdRecords set to 1');
 
     // 儲存體重記錄
     if (weightRecords.length > 0) {
@@ -281,7 +264,7 @@ export async function POST(request: Request) {
           examinationRecords,
           expenseRecords,
         },
-        createdRecords,
+        createdRecords: { count: createdRecords },
       });
     } catch (jsonErr) {
       console.error('JSON response error:', jsonErr);
