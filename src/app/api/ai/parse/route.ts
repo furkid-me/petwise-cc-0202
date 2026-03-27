@@ -210,6 +210,8 @@ export async function POST(request: Request) {
       };
     }
 
+    console.log('Final parsedData:', JSON.stringify(parsedData));
+
     const {
       dietRecords = [],
       weightRecords = [],
@@ -223,25 +225,34 @@ export async function POST(request: Request) {
 
     let createdRecords = 0;
 
+    console.log('AI parsed dietRecords:', JSON.stringify(dietRecords));
+
     // 儲存飲食記錄
     if (dietRecords.length > 0) {
       try {
-        const dietData = dietRecords.map((r: any) => ({
-          userId: decodedToken.userId,
-          petId,
-          recordedAt: r.recordedAt ? new Date(r.recordedAt) : new Date(),
-          foodName: r.foodName || r.mealTime || 'Unknown',
-          foodType: r.foodType || 'OTHER',
-          amountValue: Number(r.quantity || r.amountValue || 0),
-          amountUnit: r.unit || 'g',
-          mainIngredients: [],
-          notes: r.notes || null,
-        }));
+        const dietData = dietRecords.map((r: any) => {
+          console.log('Processing diet record:', JSON.stringify(r));
+          return {
+            userId: decodedToken.userId,
+            petId,
+            recordedAt: r.recordedAt ? new Date(r.recordedAt) : new Date(),
+            foodName: r.foodName || r.mealTime || 'Unknown',
+            foodType: r.foodType || 'OTHER',
+            amountValue: Number(r.quantity || r.amountValue || 0),
+            amountUnit: r.unit || 'g',
+            mainIngredients: [],
+            notes: r.notes || null,
+          };
+        });
+        console.log('Attempting to save dietData:', JSON.stringify(dietData));
         await prisma.dietRecord.createMany({ data: dietData });
         createdRecords += dietRecords.length;
+        console.log('Diet records saved successfully!');
       } catch (dietErr: any) {
-        console.error('Diet save error:', dietErr.message, dietErr.code);
+        console.error('Diet save error:', dietErr.message, dietErr.code, dietErr.meta);
       }
+    } else {
+      console.log('No diet records to save - dietRecords.length is 0');
     }
 
     // 儲存體重記錄
