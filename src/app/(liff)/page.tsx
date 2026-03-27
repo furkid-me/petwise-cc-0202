@@ -67,11 +67,50 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // NO FETCH - testing if render is stable
+  // Diet fetch - wait for user and pet to be ready
   useEffect(() => {
-    // Empty - no fetch
-    setLoadingRecords(false);
-  }, []);
+    // Wait for store to be ready
+    if (!user) return;
+    
+    const currentPetId = useUserStore.getState().currentPetId;
+    const pets = useUserStore.getState().pets || [];
+    const pet = pets.find(p => p.id === currentPetId) || pets[0];
+    
+    if (!pet) return;
+    
+    const petId = pet.id;
+    const token = localStorage.getItem('petwise_jwt');
+    
+    if (!token) return;
+    
+    let isCancelled = false;
+    
+    const loadData = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch('/api/diet-records?petId=' + petId + '&date=' + today, {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        
+        if (isCancelled) return;
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (!isCancelled && data?.dietRecords) {
+            setTodayDietRecords(data.dietRecords);
+          }
+        }
+      } catch (error) {
+        console.warn('Load error:', error);
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?.id]);
 
   if (!user || !activePet) {
     return (
