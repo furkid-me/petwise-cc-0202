@@ -216,20 +216,24 @@ export async function POST(request: Request) {
 
     // 儲存飲食記錄
     if (dietRecords.length > 0) {
-      await prisma.dietRecord.createMany({
-        data: dietRecords.map((r: any) => ({
-          userId: decodedToken.userId,
-          petId,
-          recordedAt: new Date(r.recordedAt || new Date()),
-          foodName: r.foodName || r.mealTime || 'Unknown',
-          foodType: r.foodType || 'OTHER',
-          amountValue: r.quantity ? parseFloat(r.quantity) : 0,
-          amountUnit: r.unit || 'g',
-          mainIngredients: [],
-          notes: r.notes || null,
-        })),
-      });
-      createdRecords += dietRecords.length;
+      try {
+        await prisma.dietRecord.createMany({
+          data: dietRecords.map((r: any) => ({
+            userId: decodedToken.userId,
+            petId,
+            recordedAt: new Date(r.recordedAt || new Date()),
+            foodName: r.foodName || r.mealTime || 'Unknown',
+            foodType: r.foodType || 'OTHER',
+            amountValue: r.quantity ? parseFloat(r.quantity) : 0,
+            amountUnit: r.unit || 'g',
+            mainIngredients: [],
+            notes: r.notes || null,
+          })),
+        });
+        createdRecords += dietRecords.length;
+      } catch (dietErr) {
+        console.error('Diet save error:', dietErr);
+      }
     }
 
     // 儲存體重記錄
@@ -259,21 +263,26 @@ export async function POST(request: Request) {
     // 儲存檢驗記錄 - 跳過
     // 儲存花費記錄 - 跳過
 
-    return NextResponse.json({
-      success: true,
-      message: `成功解析並儲存 ${createdRecords} 筆記錄`,
-      parsedData: {
-        dietRecords,
-        weightRecords,
-        reminders,
-        dailyTasks,
-        medicalRecords,
-        medicationRecords,
-        examinationRecords,
-        expenseRecords,
-      },
-      createdRecords,
-    });
+    try {
+      return NextResponse.json({
+        success: true,
+        message: `成功解析並儲存 ${createdRecords} 筆記錄`,
+        parsedData: {
+          dietRecords,
+          weightRecords,
+          reminders,
+          dailyTasks,
+          medicalRecords,
+          medicationRecords,
+          examinationRecords,
+          expenseRecords,
+        },
+        createdRecords,
+      });
+    } catch (jsonErr) {
+      console.error('JSON response error:', jsonErr);
+      return NextResponse.json({ error: 'Response generation failed' }, { status: 500 });
+    }
   } catch (error) {
     console.error('AI parse API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
