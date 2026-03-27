@@ -132,7 +132,7 @@ export default function WeightPage() {
         <h2 className="text-sm font-semibold text-gray-500 mb-2">最新體重</h2>
         {latestWeight ? (
           <div>
-            <p className="text-3xl font-bold text-indigo-600">{Number(latestWeight?.weightKg || 0).toFixed(1)} kg
+            <p className="text-3xl font-bold text-indigo-600">{Number(latestWeight?.weightKg || 0).toFixed(1)} kg</p>
             <p className="text-xs text-gray-400 mt-1">記錄於 {new Date(latestWeight.recordDate).toLocaleDateString('zh-TW')}</p>
           </div>
         ) : (
