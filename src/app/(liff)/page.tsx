@@ -67,7 +67,7 @@ export default function HomePage() {
     setErrorRecords(error);
   }, []);
 
-  // Test diet records with state update
+  // Test diet records with safe state update
   useEffect(() => {
     if (!user || !activePet) return;
     
@@ -82,8 +82,9 @@ export default function HomePage() {
       .then(res => res.json())
       .then(data => {
         console.log('Diet data:', data);
-        if (data?.dietRecords) {
-          setTodayDietRecords(data.dietRecords);
+        const records = data?.dietRecords;
+        if (Array.isArray(records) && records.length > 0) {
+          setTodayDietRecords(records);
         }
         setLoadingRecords(false);
       })
