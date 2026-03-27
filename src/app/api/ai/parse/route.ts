@@ -250,35 +250,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // 儲存提醒
-    if (reminders.length > 0) {
-      try {
-        await prisma.reminder.createMany({
-          data: reminders.map((r: any) => {
-            const remindAt = r.scheduledTime 
-              ? new Date(`${r.scheduledDate}T${r.scheduledTime}:00Z`)
-              : new Date(r.scheduledDate);
-            const repeatTypeMap: Record<string, string> = {
-              'once': 'NONE', 'daily': 'DAILY', 'weekly': 'WEEKLY',
-              'monthly': 'MONTHLY', 'yearly': 'YEARLY',
-            };
-            return {
-              userId: decodedToken.userId,
-              petId: petId,
-              title: r.title,
-              description: r.notes || null,
-              category: (r.type || 'OTHER').toUpperCase(),
-              remindAt,
-              repeatType: repeatTypeMap[r.frequency] || 'NONE',
-              isActive: true,
-            };
-          }),
-        });
-        createdRecords += reminders.length;
-      } catch (e) {
-        console.error('Reminder save error:', e);
-      }
-    }
+    // 儲存提醒 - 跳過（複雜的 enum 類型）
+    // if (reminders.length > 0) { ... }
 
     // 儲存日常任務 - 跳過
     // 儲存醫療記錄 - 跳過
