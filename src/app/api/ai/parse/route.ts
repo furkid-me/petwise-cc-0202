@@ -152,9 +152,10 @@ export async function POST(request: Request) {
     // 測試用：跳過 OpenAI，直接返回模擬資料
     const mockData = {
       dietRecords: [{
-        mealTime: '早上的',
-        foodType: '罐頭',
-        quantity: 20,
+        recordedAt: new Date().toISOString(),
+        foodName: '罐頭',
+        foodType: '濕食',
+        quantity: '20',
         unit: 'g',
         notes: '測試'
       }],
@@ -217,22 +218,25 @@ export async function POST(request: Request) {
     // 儲存飲食記錄
     if (dietRecords.length > 0) {
       try {
-        await prisma.dietRecord.createMany({
-          data: dietRecords.map((r: any) => ({
+        const dietData = dietRecords.map((r: any) => {
+          const recordedAtDate = r.recordedAt ? new Date(r.recordedAt) : new Date();
+          return {
             userId: decodedToken.userId,
             petId,
-            recordedAt: new Date(r.recordedAt || new Date()),
+            recordedAt: recordedAtDate,
             foodName: r.foodName || r.mealTime || 'Unknown',
             foodType: r.foodType || 'OTHER',
             amountValue: r.quantity ? parseFloat(r.quantity) : 0,
             amountUnit: r.unit || 'g',
             mainIngredients: [],
             notes: r.notes || null,
-          })),
+          };
         });
+        console.log('Creating diet records:', dietData);
+        await prisma.dietRecord.createMany({ data: dietData });
         createdRecords += dietRecords.length;
-      } catch (dietErr) {
-        console.error('Diet save error:', dietErr);
+      } catch (dietErr: any) {
+        console.error('Diet save error:', dietErr.message, dietErr.code);
       }
     }
 
