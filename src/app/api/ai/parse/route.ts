@@ -194,11 +194,12 @@ export async function POST(request: Request) {
         data: dietRecords.map((r: any) => ({
           userId: decodedToken.userId,
           petId,
-          mealTime: r.mealTime,
-          foodType: r.foodType,
-          brandName: r.brandName || null,
-          quantity: r.quantity ? parseFloat(r.quantity) : null,
-          unit: r.unit || null,
+          recordedAt: new Date(r.recordedAt || new Date()),
+          foodName: r.foodName || r.mealTime || 'Unknown',
+          foodType: r.foodType || 'OTHER',
+          amountValue: r.quantity ? parseFloat(r.quantity) : 0,
+          amountUnit: r.unit || 'g',
+          mainIngredients: [],
           notes: r.notes || null,
         })),
       });
@@ -211,9 +212,8 @@ export async function POST(request: Request) {
         data: weightRecords.map((r: any) => ({
           userId: decodedToken.userId,
           petId,
-          weight: parseFloat(r.weight),
-          unit: r.unit || 'kg',
-          measuredAt: r.measuredAt ? new Date(r.measuredAt) : new Date(),
+          recordDate: new Date(r.measuredAt || new Date()),
+          weightKg: parseFloat(r.weight) || 0,
           notes: r.notes || null,
         })),
       });
@@ -223,17 +223,32 @@ export async function POST(request: Request) {
     // 儲存提醒
     if (reminders.length > 0) {
       await prisma.reminder.createMany({
-        data: reminders.map((r: any) => ({
-          userId: decodedToken.userId,
-          petId,
-          title: r.title,
-          type: r.type || 'other',
-          scheduledDate: new Date(r.scheduledDate),
-          scheduledTime: r.scheduledTime || null,
-          frequency: r.frequency || 'once',
-          notes: r.notes || null,
-          isActive: true,
-        })),
+        data: reminders.map((r: any) => {
+          // Combine date and time
+          const remindAt = r.scheduledTime 
+            ? new Date(`${r.scheduledDate}T${r.scheduledTime}:00Z`)
+            : new Date(r.scheduledDate);
+          
+          // Map frequency to repeatType
+          const repeatTypeMap: Record<string, string> = {
+            'once': 'NONE',
+            'daily': 'DAILY',
+            'weekly': 'WEEKLY',
+            'monthly': 'MONTHLY',
+            'yearly': 'YEARLY',
+          };
+          
+          return {
+            userId: decodedToken.userId,
+            petId: petId,
+            title: r.title,
+            description: r.notes || null,
+            category: (r.type || 'OTHER').toUpperCase(),
+            remindAt,
+            repeatType: repeatTypeMap[r.frequency] || 'NONE',
+            isActive: true,
+          };
+        }),
       });
       createdRecords += reminders.length;
     }
