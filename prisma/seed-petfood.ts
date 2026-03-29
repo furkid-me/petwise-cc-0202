@@ -66,7 +66,7 @@ async function main() {
         await prisma.foodProduct.upsert({
           where: { moaId: product.moaId },
           update: cleanProduct,
-          create: cleanProduct
+          create: cleanProduct as any
         })
         productCount++
       } catch (error) {
