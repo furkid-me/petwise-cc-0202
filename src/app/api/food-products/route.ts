@@ -1,89 +1,170 @@
-// src/app/api/food-products/route.ts
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key';
-
-// GET /api/food-products - 獲取寵物食品列表（可帶查詢參數）
-export async function GET(request: Request) {
+// GET /api/food-products - 搜尋/篩選寵物食品
+export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('Authorization')?.split(' ')[1];
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const searchParams = request.nextUrl.searchParams
+    
+    // 搜尋參數
+    const query = searchParams.get('q') || ''
+    const petType = searchParams.get('petType') // dog, cat, dog_cat, other_small_animal
+    const category = searchParams.get('category') // treats, canned, dry_food, etc.
+    const brand = searchParams.get('brand')
+    const origin = searchParams.get('origin')
+    const minProtein = searchParams.get('minProtein')
+    const maxCalories = searchParams.get('maxCalories')
+    const allergens = searchParams.get('allergens') // comma-separated: 雞肉,蛋,玉米
+    
+    // 分頁
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
+    const skip = (page - 1) * limit
+    
+    // 建立查詢條件
+    const where: any = {}
+    
+    if (query) {
+      where.OR = [
+        { name: { contains: query, mode: 'insensitive' } },
+        { brand: { contains: query, mode: 'insensitive' } },
+        { fullIngredientsList: { contains: query, mode: 'insensitive' } }
+      ]
     }
-
-    let decodedToken: any;
-    try {
-      decodedToken = jwt.verify(token, JWT_SECRET);
-    } catch (err) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    
+    if (petType) {
+      where.petType = { has: petType }
     }
-
-    const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query') || '';
-    const petType = searchParams.get('petType') || '';
-    const type = searchParams.get('type') || '';
-
-    const foodProducts = await prisma.foodProduct.findMany({
-      where: {
-        AND: [
-          query ? {
-            OR: [
-              { name: { contains: query, mode: 'insensitive' } },
-              { brand: { contains: query, mode: 'insensitive' } },
-            ],
-          } : {},
-          petType ? { petType: { has: petType } } : {},
-          type ? { type: { contains: type, mode: 'insensitive' } } : {},
-        ],
-      },
-      orderBy: { name: 'asc' },
-      take: 20,
-    });
-
-    return NextResponse.json({ foodProducts }, { status: 200 });
+    
+    if (category) {
+      where.type = category
+    }
+    
+    if (brand) {
+      where.brand = { contains: brand, mode: 'insensitive' }
+    }
+    
+    if (origin) {
+      where.origin = origin
+    }
+    
+    if (minProtein) {
+      where.proteinPer100g = { gte: parseFloat(minProtein) }
+    }
+    
+    if (maxCalories) {
+      where.caloriesPer100g = { lte: parseFloat(maxCalories) }
+    }
+    
+    if (allergens) {
+      const allergenList = allergens.split(',').map(a => a.trim())
+      where.NOT = {
+        allergens: {
+          hasSome: allergenList
+        }
+      }
+    }
+    
+    // 查詢資料庫
+    const [products, total] = await Promise.all([
+      prisma.foodProduct.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          brand: true,
+          type: true,
+          petType: true,
+          origin: true,
+          caloriesPer100g: true,
+          proteinPer100g: true,
+          fatPer100g: true,
+          carbsPer100g: true,
+          mainIngredients: true,
+          allergens: true,
+          packageDesc: true,
+          imageUrl: true
+        }
+      }),
+      prisma.foodProduct.count({ where })
+    ])
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        products,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
+    })
+    
   } catch (error) {
-    console.error('Get food products API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Food products API error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch food products' },
+      { status: 500 }
+    )
   }
 }
 
-// POST /api/food-products - 新增寵物食品資料
-export async function POST(request: Request) {
+// POST /api/food-products - 取得產品詳情（多筆）
+export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get('Authorization')?.split(' ')[1];
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const body = await request.json()
+    const { ids } = body
+    
+    if (!ids || !Array.isArray(ids)) {
+      return NextResponse.json(
+        { success: false, error: 'ids array is required' },
+        { status: 400 }
+      )
     }
-
-    let decodedToken: any;
-    try {
-      decodedToken = jwt.verify(token, JWT_SECRET);
-    } catch (err) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const data = await request.json();
-
-    const newFoodProduct = await prisma.foodProduct.create({
-      data: {
-        ...data,
-        caloriesPer100g: data.caloriesPer100g ? parseFloat(data.caloriesPer100g) : null,
-        proteinPer100g: data.proteinPer100g ? parseFloat(data.proteinPer100g) : null,
-        fatPer100g: data.fatPer100g ? parseFloat(data.fatPer100g) : null,
-        carbsPer100g: data.carbsPer100g ? parseFloat(data.carbsPer100g) : null,
-        moisturePer100g: data.moisturePer100g ? parseFloat(data.moisturePer100g) : null,
-        fiberPer100g: data.fiberPer100g ? parseFloat(data.fiberPer100g) : null,
-        ashPer100g: data.ashPer100g ? parseFloat(data.ashPer100g) : null,
-        packageSizeG: data.packageSizeG ? parseFloat(data.packageSizeG) : null,
-        servingSizeG: data.servingSizeG ? parseFloat(data.servingSizeG) : null,
-      },
-    });
-
-    return NextResponse.json(newFoodProduct, { status: 201 });
+    
+    const products = await prisma.foodProduct.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        name: true,
+        brand: true,
+        type: true,
+        petType: true,
+        origin: true,
+        fullIngredientsList: true,
+        mainIngredients: true,
+        caloriesPer100g: true,
+        proteinPer100g: true,
+        fatPer100g: true,
+        carbsPer100g: true,
+        fiberPer100g: true,
+        moisturePer100g: true,
+        sodiumPer100g: true,
+        calciumPer100g: true,
+        phosphorusPer100g: true,
+        allergens: true,
+        packageDesc: true,
+        usageMethod: true,
+        storageMethod: true,
+        imageUrl: true
+      }
+    })
+    
+    return NextResponse.json({
+      success: true,
+      data: products
+    })
+    
   } catch (error) {
-    console.error('Create food product API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Food products batch API error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch food products' },
+      { status: 500 }
+    )
   }
 }

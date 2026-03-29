@@ -197,46 +197,150 @@ model WeightRecord {
 
 // ==================== 食品資料庫 ====================
 
+// 品牌資料表
+model FoodBrand {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  name        String   @unique @db.Text
+  origin      String?  @db.Text
+  website     String?  @db.Text
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  products    FoodProduct[]
+
+  @@map("food_brands")
+}
+
+// 食品分類表
+model FoodCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  name        String   @unique @db.Text
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  
+  products    FoodProduct[]
+
+  @@map("food_categories")
+}
+
+// 適用情形標籤表
+model ApplicableTag {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  name        String   @unique @db.Text
+  description String?  @db.Text
+  tagType     String   @map("tag_type") // 'life_stage', 'health', ' breed_size', 'special_needs'
+  
+  products    ProductTag[]
+
+  @@map("applicable_tags")
+}
+
+// 主產品資料表
 model FoodProduct {
   id                  String   @id @default(uuid()) @db.Uuid
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // 基本資料
   name                String   @db.Text
-  brand               String   @db.Text
-  type                String   @db.Text
+  brandId             String?  @map("brand_id") @db.Uuid
+  categoryId          String?  @map("category_id") @db.Uuid
+  
+  // MOA 原始資料
+  moaId               String?  @map("moa_id") @unique // 農業部資料 ID
+  moaItem             String?  @map("moa_item") // 食品種類
+  moaSource           String?  @map("moa_source") // 產品來源（製造、加工）
+  moaLegalName        String?  @map("moa_legal_name") // 廠商名稱
+  
+  // 基本欄位（向後相容）
+  brand               String   @default("") @db.Text
+  type                String   @default("") @db.Text
   // 品類型（乾糧、主食罐、副食罐、零食）
   petType             String[] @map("pet_type")
-  // 適用寵物類型
+  // 適用寵物類型：dog, cat, dog_cat, other_small_animal
   ageGroup            String[] @map("age_group")
-  // 適用年齡層
+  // 適用年齡層：幼年、成年、老年、全齡
   flavor              String?  @db.Text
   origin              String?  @db.Text
-  fullIngredientsList String   @map("full_ingredients_list") @db.Text
+  fullIngredientsList String   @default("") @map("full_ingredients_list") @db.Text
   // 完整成分列表（原始文字）
   parsedIngredients   String[] @map("parsed_ingredients")
   // 解析後的成分
   mainIngredients     String[] @map("main_ingredients")
   // 主要成分（AI解析）
+  
+  // 營養標示（每100公克）
   caloriesPer100g     Decimal? @map("calories_per_100g") @db.Decimal(6, 2)
   proteinPer100g      Decimal? @map("protein_per_100g") @db.Decimal(6, 2)
   fatPer100g          Decimal? @map("fat_per_100g") @db.Decimal(6, 2)
   carbsPer100g        Decimal? @map("carbs_per_100g") @db.Decimal(6, 2)
-  moisturePer100g     Decimal? @map("moisture_per_100g") @db.Decimal(6, 2)
   fiberPer100g        Decimal? @map("fiber_per_100g") @db.Decimal(6, 2)
   ashPer100g          Decimal? @map("ash_per_100g") @db.Decimal(6, 2)
+  moisturePer100g     Decimal? @map("moisture_per_100g") @db.Decimal(6, 2)
+  
+  // 礦物質
+  calciumPer100g      Decimal? @map("calcium_per_100g") @db.Decimal(6, 2)
+  phosphorusPer100g    Decimal? @map("phosphorus_per_100g") @db.Decimal(6, 2)
+  sodiumPer100g       Decimal? @map("sodium_per_100g") @db.Decimal(6, 2)
+  potassiumPer100g    Decimal? @map("potassium_per_100g") @db.Decimal(6, 2)
+  magnesiumPer100g    Decimal? @map("magnesium_per_100g") @db.Decimal(6, 2)
+  ironPer100g         Decimal? @map("iron_per_100g") @db.Decimal(6, 2)
+  zincPer100g         Decimal? @map("zinc_per_100g") @db.Decimal(6, 2)
+  
+  // 維生素
+  vitaminAPer100g     Decimal? @map("vitamin_a_per_100g") @db.Decimal(8, 2)
+  vitaminDPer100g     Decimal? @map("vitamin_d_per_100g") @db.Decimal(8, 2)
+  vitaminEPer100g     Decimal? @map("vitamin_e_per_100g") @db.Decimal(8, 2)
+  
+  // 脂肪酸
+  omega3Per100g       Decimal? @map("omega3_per_100g") @db.Decimal(6, 2)
+  omega6Per100g       Decimal? @map("omega6_per_100g") @db.Decimal(6, 2)
+  tauriPer100g        Decimal? @map("taurine_per_100g") @db.Decimal(6, 2)
+  
+  // 過敏原
+  allergens           String[]
+  
+  // 包裝資訊
   packageSizeG        Decimal? @map("package_size_g") @db.Decimal(8, 2)
   servingSizeG        Decimal? @map("serving_size_g") @db.Decimal(6, 2)
+  packageDesc         String?  @map("package_desc") @db.Text
+  
+  // 使用說明
+  usageMethod         String?  @map("usage_method") @db.Text
+  storageMethod       String?  @map("storage_method") @db.Text
+  
+  // 其他
   imageUrl            String?  @map("image_url") @db.Text
   barcode             String?  @db.Text
   isVerified          Boolean  @default(false) @map("is_verified")
   // 是否已人工審核
-  allergens           String[]
-  // 新增過敏原
 
+  // 關聯
+  brandObj            FoodBrand?     @relation(fields: [brandId], references: [id])
+  categoryObj         FoodCategory?  @relation(fields: [categoryId], references: [id])
+  tags                ProductTag[]
   dietRecords         DietRecord[]
   scheduledFeedings   ScheduledFeeding[]
 
   @@map("food_products")
+}
+
+// 產品標籤關聯表
+model ProductTag {
+  id          String   @id @default(uuid()) @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  tagId       String   @map("tag_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  product     FoodProduct  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag         ApplicableTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, tagId])
+  @@map("product_tags")
 }
 
 // ==================== 飲食記錄相關 ====================

@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Petwise 寵物食品資料庫</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    :root {
+      --primary: #FF6B35;
+      --primary-dark: #E55A2B;
+      --bg: #F8F9FA;
+      --card-bg: #FFFFFF;
+      --text: #1A1A2E;
+      --text-secondary: #666;
+      --border: #E5E5E5;
+      --success: #4CAF50;
+      --warning: #FFC107;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+      color: white;
+      padding: 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 10px rgba(255,107,53,0.3);
+    }
+    
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    .search-box {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .search-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      background: rgba(255,255,255,0.95);
+      color: var(--text);
+    }
+    
+    .search-input::placeholder {
+      color: #999;
+    }
+    
+    .search-btn {
+      padding: 12px 20px;
+      background: white;
+      color: var(--primary);
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    /* Filters */
+    .filters {
+      padding: 12px 16px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .filter-scroll {
+      display: flex;
+      gap: 8px;
+      min-width: max-content;
+    }
+    
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .filter-chip.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+    
+    .filter-chip .emoji {
+      font-size: 16px;
+    }
+    
+    /* Category Pills */
+    .category-pills {
+      padding: 10px 16px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    
+    .category-scroll {
+      display: flex;
+      gap: 6px;
+      min-width: max-content;
+    }
+    
+    .category-pill {
+      padding: 6px 12px;
+      background: var(--bg);
+      border-radius: 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .category-pill.active {
+      background: #FFF3ED;
+      color: var(--primary);
+      font-weight: 500;
+    }
+    
+    /* Results */
+    .results {
+      padding: 12px 16px;
+    }
+    
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .results-count {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .sort-select {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      background: white;
+    }
+    
+    /* Product Cards */
+    .product-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .product-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .product-card:active {
+      transform: scale(0.98);
+    }
+    
+    .product-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    
+    .product-name {
+      font-size: 16px;
+      font-weight: 600;
+      flex: 1;
+      margin-right: 10px;
+    }
+    
+    .product-badge {
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    
+    .badge-dog { background: #E3F2FD; color: #1976D2; }
+    .badge-cat { background: #FCE4EC; color: #C2185B; }
+    .badge-dog_cat { background: #FFF3E0; color: #F57C00; }
+    .badge-other { background: #E8F5E9; color: #388E3C; }
+    
+    .product-brand {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .product-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: var(--bg);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .product-nutrition {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .nutrition-item {
+      text-align: center;
+    }
+    
+    .nutrition-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    
+    .nutrition-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    
+    /* Detail Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    
+    .modal-overlay.show {
+      display: flex;
+    }
+    
+    .modal {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s ease-out;
+    }
+    
+    .modal-overlay.show .modal {
+      transform: translateY(0);
+    }
+    
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto;
+    }
+    
+    .modal-header {
+      padding: 0 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .modal-brand {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .modal-section {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .modal-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    
+    .nutrition-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    
+    .nutrition-card {
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    
+    .nutrition-card .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    
+    .nutrition-card .unit {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .nutrition-card .label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    .allergen-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .allergen-tag {
+      padding: 6px 12px;
+      background: #FFF3E0;
+      color: #E65100;
+      border-radius: 16px;
+      font-size: 13px;
+    }
+    
+    .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      background: var(--bg);
+      border: none;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Loading */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    
+    .empty-state .icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+    
+    .empty-state h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    
+    .empty-state p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      z-index: 100;
+    }
+    
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 11px;
+    }
+    
+    .nav-item .icon {
+      font-size: 24px;
+    }
+    
+    .nav-item.active {
+      color: var(--primary);
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>🐾 Petwise 寵物食品庫</h1>
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜尋食品名稱、品牌...">
+      <button class="search-btn" onclick="doSearch()">搜尋</button>
+    </div>
+  </div>
+  
+  <!-- Pet Type Filters -->
+  <div class="filters">
+    <div class="filter-scroll" id="petTypeFilters">
+      <button class="filter-chip active" data-type="">
+        <span class="emoji">全部</span>
+      </button>
+      <button class="filter-chip" data-type="dog">
+        <span class="emoji">🐕</span> 狗
+      </button>
+      <button class="filter-chip" data-type="cat">
+        <span class="emoji">🐱</span> 貓
+      </button>
+      <button class="filter-chip" data-type="dog_cat">
+        <span class="emoji">🐾</span> 狗貓
+      </button>
+      <button class="filter-chip" data-type="other">
+        <span class="emoji">🐹</span> 小動物
+      </button>
+    </div>
+  </div>
+  
+  <!-- Category Pills -->
+  <div class="category-pills">
+    <div class="category-scroll" id="categoryPills">
+      <button class="category-pill active" data-category="">全部</button>
+      <button class="category-pill" data-category="零食">零食</button>
+      <button class="category-pill" data-category="罐頭">罐頭</button>
+      <button class="category-pill" data-category="乾飼糧">乾飼糧</button>
+      <button class="category-pill" data-category="補助食品">補助食品</button>
+      <button class="category-pill" data-category="生鮮、冷凍">生鮮/冷凍</button>
+      <button class="category-pill" data-category="潔牙骨">潔牙骨</button>
+    </div>
+  </div>
+  
+  <!-- Results -->
+  <div class="results">
+    <div class="results-header">
+      <span class="results-count" id="resultsCount">載入中...</span>
+    </div>
+    <div class="product-list" id="productList">
+      <div class="loading">
+        <div class="spinner"></div>
+        <span>載入資料中...</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">產品名稱</h2>
+        <p class="modal-brand" id="modalBrand">品牌</p>
+      </div>
+      
+      <div class="modal-section">
+        <h3 class="modal-section-title">基本資訊</h3>
+        <div class="nutrition-grid">
+          <div class="nutrition-card">
+            <div class="value" id="modalCalories">-</div>
+            <div class="unit">kcal</div>
+            <div class="label">熱量/100g</div>
+          </div>
+          <div class="nutrition-card">
+            <div class="value" id="modalProtein">-</div>
+            <div class="unit">g</div>
+            <div class="label">蛋白質</div>
+          </div>
+          <div class="nutrition-card">
+            <div class="value" id="modalFat">-</div>
+            <div class="unit">g</div>
+            <div class="label">脂肪</div>
+          </div>
+          <div class="nutrition-card">
+            <div class="value" id="modalCarbs">-</div>
+            <div class="unit">g</div>
+            <div class="label">碳水化合物</div>
+          </div>
+          <div class="nutrition-card">
+            <div class="value" id="modalFiber">-</div>
+            <div class="unit">g</div>
+            <div class="label">纖維</div>
+          </div>
+          <div class="nutrition-card">
+            <div class="value" id="modalMoisture">-</div>
+            <div class="unit">g</div>
+            <div class="label">水分</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-section">
+        <h3 class="modal-section-title">過敏原</h3>
+        <div class="allergen-list" id="modalAllergens">
+          <span class="allergen-tag">無</span>
+        </div>
+      </div>
+      
+      <div class="modal-section">
+        <h3 class="modal-section-title">主要成分</h3>
+        <div id="modalIngredients">-</div>
+      </div>
+      
+      <div class="modal-section">
+        <h3 class="modal-section-title">原產地</h3>
+        <p id="modalOrigin">-</p>
+      </div>
+      
+      <div class="modal-section">
+        <h3 class="modal-section-title">使用方式</h3>
+        <p id="modalUsage">-</p>
+      </div>
+      
+      <div class="modal-section">
+        <h3 class="modal-section-title">保存方式</h3>
+        <p id="modalStorage">-</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 資料狀態
+    let allProducts = [];
+    let filteredProducts = [];
+    let currentFilters = {
+      petType: '',
+      category: '',
+      search: ''
+    };
+    
+    // 初始化
+    async function init() {
+      try {
+        showLoading();
+        
+        // 嘗試載入本地資料
+        const response = await fetch('./petfood_seed.json');
+        if (!response.ok) throw new Error('Failed to load');
+        const data = await response.json();
+        allProducts = data.products || [];
+        
+        // 如果本地沒有，嘗試從 GitHub Raw
+        if (allProducts.length === 0) {
+          const githubResponse = await fetch('https://raw.githubusercontent.com/furkid-me/petwise-cc-0202/main/data/petfood_seed.json');
+          if (githubResponse.ok) {
+            const githubData = await githubResponse.json();
+            allProducts = githubData.products || [];
+          }
+        }
+        
+        if (allProducts.length === 0) {
+          showEmpty('無法載入資料', '請稍後再試');
+          return;
+        }
+        
+        applyFilters();
+        
+      } catch (error) {
+        console.error('Load error:', error);
+        // 使用內嵌示範資料
+        allProducts = getDemoProducts();
+        applyFilters();
+      }
+    }
+    
+    // 示範資料
+    function getDemoProducts() {
+      return [
+        {
+          id: '1',
+          name: '雞肉乾',
+          brand: '【個人】楊甯喬',
+          type: '零食',
+          petType: ['dog_cat'],
+          origin: '台灣',
+          caloriesPer100g: '164.5',
+          proteinPer100g: '12.8',
+          fatPer100g: '3.0',
+          carbsPer100g: '0.8',
+          fiberPer100g: '0.5',
+          moisturePer100g: '15.0',
+          allergens: ['蛋'],
+          mainIngredients: ['雞肉'],
+          usageMethod: '請將零食撥開或剪成小塊',
+          storageMethod: '冷藏保存'
+        },
+        {
+          id: '2',
+          name: '羊奶荷包蛋',
+          brand: '【個人】楊甯喬',
+          type: '零食',
+          petType: ['dog_cat'],
+          origin: '台灣',
+          caloriesPer100g: '46.2',
+          proteinPer100g: '8.5',
+          fatPer100g: '9.6',
+          carbsPer100g: '1.2',
+          fiberPer100g: '0.3',
+          moisturePer100g: '75.0',
+          allergens: ['蛋'],
+          mainIngredients: ['羊肉', '雞蛋'],
+          usageMethod: '適量給予',
+          storageMethod: '冷藏保存'
+        },
+        {
+          id: '3',
+          name: '鴨氣管',
+          brand: '【個人】黃如盈',
+          type: '零食',
+          petType: ['dog'],
+          origin: '台灣',
+          caloriesPer100g: '200.0',
+          proteinPer100g: '15.0',
+          fatPer100g: '8.0',
+          carbsPer100g: '0.5',
+          fiberPer100g: '0.2',
+          moisturePer100g: '10.0',
+          allergens: [],
+          mainIngredients: ['鴨肉'],
+          usageMethod: '作為零食適量給予',
+          storageMethod: '陰涼乾燥處'
+        },
+        {
+          id: '4',
+          name: '頂級無穀貓糧',
+          brand: '皇家寵物食品',
+          type: '乾飼糧',
+          petType: ['cat'],
+          origin: '法國',
+          caloriesPer100g: '380.0',
+          proteinPer100g: '40.0',
+          fatPer100g: '18.0',
+          carbsPer100g: '25.0',
+          fiberPer100g: '3.0',
+          moisturePer100g: '8.0',
+          allergens: [],
+          mainIngredients: ['雞肉', '火雞肉'],
+          usageMethod: '每日適量',
+          storageMethod: '陰涼乾燥處'
+        },
+        {
+          id: '5',
+          name: '天然狗罐頭',
+          brand: '希爾思寵物食品',
+          type: '罐頭',
+          petType: ['dog'],
+          origin: '美國',
+          caloriesPer100g: '120.0',
+          proteinPer100g: '10.0',
+          fatPer100g: '7.0',
+          carbsPer100g: '5.0',
+          fiberPer100g: '1.0',
+          moisturePer100g: '78.0',
+          allergens: ['玉米', '大豆'],
+          mainIngredients: ['牛肉', '胡蘿蔔'],
+          usageMethod: '直接餵食或搭配乾糧',
+          storageMethod: '開封後冷藏'
+        }
+      ];
+    }
+    
+    // 搜尋
+    function doSearch() {
+      currentFilters.search = document.getElementById('searchInput').value.trim();
+      applyFilters();
+    }
+    
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') doSearch();
+    });
+    
+    // 寵物類型篩選
+    document.querySelectorAll('#petTypeFilters .filter-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('#petTypeFilters .filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentFilters.petType = chip.dataset.type;
+        applyFilters();
+      });
+    });
+    
+    // 分類篩選
+    document.querySelectorAll('#categoryPills .category-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#categoryPills .category-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentFilters.category = pill.dataset.category;
+        applyFilters();
+      });
+    });
+    
+    // 應用篩選
+    function applyFilters() {
+      filteredProducts = allProducts.filter(p => {
+        // 搜尋
+        if (currentFilters.search) {
+          const s = currentFilters.search.toLowerCase();
+          if (!p.name?.toLowerCase().includes(s) && 
+              !p.brand?.toLowerCase().includes(s) &&
+              !p.mainIngredients?.join().toLowerCase().includes(s)) {
+            return false;
+          }
+        }
+        
+        // 寵物類型
+        if (currentFilters.petType) {
+          if (currentFilters.petType === 'other') {
+            if (p.petType?.includes('dog_cat') || p.petType?.includes('dog') || p.petType?.includes('cat')) {
+              return false;
+            }
+          } else if (!p.petType?.includes(currentFilters.petType)) {
+            return false;
+          }
+        }
+        
+        // 分類
+        if (currentFilters.category && p.type !== currentFilters.category) {
+          return false;
+        }
+        
+        return true;
+      });
+      
+      renderProducts();
+    }
+    
+    // 渲染產品列表
+    function renderProducts() {
+      const list = document.getElementById('productList');
+      const count = document.getElementById('resultsCount');
+      
+      count.textContent = `共 ${filteredProducts.length} 項產品`;
+      
+      if (filteredProducts.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🔍</div>
+            <h3>找不到符合的產品</h3>
+            <p>試試不同的關鍵字或篩選條件</p>
+          </div>
+        `;
+        return;
+      }
+      
+      list.innerHTML = filteredProducts.slice(0, 50).map(p => `
+        <div class="product-card" onclick="showDetail('${p.id}')">
+          <div class="product-header">
+            <div class="product-name">${p.name}</div>
+            ${getBadge(p.petType)}
+          </div>
+          <div class="product-brand">${p.brand || '未知品牌'}</div>
+          <div class="product-meta">
+            <span class="meta-tag">${p.type || '未分類'}</span>
+            <span class="meta-tag">📍 ${p.origin || '未知'}</span>
+            ${p.mainIngredients?.length ? `<span class="meta-tag">🥩 ${p.mainIngredients[0]}</span>` : ''}
+          </div>
+          <div class="product-nutrition">
+            <div class="nutrition-item">
+              <div class="nutrition-value">${p.caloriesPer100g || '-'}</div>
+              <div class="nutrition-label">kcal</div>
+            </div>
+            <div class="nutrition-item">
+              <div class="nutrition-value">${p.proteinPer100g || '-'}</div>
+              <div class="nutrition-label">蛋白質</div>
+            </div>
+            <div class="nutrition-item">
+              <div class="nutrition-value">${p.fatPer100g || '-'}</div>
+              <div class="nutrition-label">脂肪</div>
+            </div>
+            <div class="nutrition-item">
+              <div class="nutrition-value">${p.carbsPer100g || '-'}</div>
+              <div class="nutrition-label">碳水</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function getBadge(petType) {
+      if (!petType || !petType.length) return '';
+      const type = petType[0];
+      const badges = {
+        'dog': '<span class="product-badge badge-dog">🐕 狗</span>',
+        'cat': '<span class="product-badge badge-cat">🐱 貓</span>',
+        'dog_cat': '<span class="product-badge badge-dog_cat">🐾 狗貓</span>',
+        'other_small_animal': '<span class="product-badge badge-other">🐹 小動物</span>'
+      };
+      return badges[type] || '';
+    }
+    
+    // 顯示詳情
+    function showDetail(id) {
+      const p = filteredProducts.find(x => x.id === id);
+      if (!p) return;
+      
+      document.getElementById('modalTitle').textContent = p.name;
+      document.getElementById('modalBrand').textContent = p.brand || '未知品牌';
+      document.getElementById('modalCalories').textContent = p.caloriesPer100g || '-';
+      document.getElementById('modalProtein').textContent = p.proteinPer100g || '-';
+      document.getElementById('modalFat').textContent = p.fatPer100g || '-';
+      document.getElementById('modalCarbs').textContent = p.carbsPer100g || '-';
+      document.getElementById('modalFiber').textContent = p.fiberPer100g || '-';
+      document.getElementById('modalMoisture').textContent = p.moisturePer100g || '-';
+      document.getElementById('modalOrigin').textContent = p.origin || '未知';
+      document.getElementById('modalUsage').textContent = p.usageMethod || '無說明';
+      document.getElementById('modalStorage').textContent = p.storageMethod || '無說明';
+      document.getElementById('modalIngredients').textContent = p.mainIngredients?.join('、') || '未知';
+      
+      const allergenList = document.getElementById('modalAllergens');
+      if (p.allergens && p.allergens.length > 0) {
+        allergenList.innerHTML = p.allergens.map(a => `<span class="allergen-tag">${a}</span>`).join('');
+      } else {
+        allergenList.innerHTML = '<span class="allergen-tag" style="background:#E8F5E9;color:#388E3C">✅ 無常見過敏原</span>';
+      }
+      
+      document.getElementById('detailModal').classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function closeModal(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('detailModal').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+    
+    function showLoading() {
+      document.getElementById('productList').innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <span>載入資料中...</span>
+        </div>
+      `;
+    }
+    
+    function showEmpty(title, msg) {
+      document.getElementById('productList').innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <h3>${title}</h3>
+          <p>${msg}</p>
+        </div>
+      `;
+      document.getElementById('resultsCount').textContent = '0 項產品';
+    }
+    
+    // 啟動
+    init();
+  </script>
+</body>
+</html>

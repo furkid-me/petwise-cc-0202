@@ -74,7 +74,7 @@ export default function SupplementsPage() {
       {/* 說明文字 */}
       <div className="-mt-4 mx-4 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
         <p className="text-sm text-amber-800">
-          💡 營養品包含維他命、魚油、鈣片、益生菌等保健品。請在「用藥記錄」中新增時，用途選擇「營養補充」。
+          💡 營養品包含維他命、魚油、鈣片、益生菌等保健品。在「用藥記錄」中新增時，用途選擇「營養補充」。
         </p>
       </div>
 
