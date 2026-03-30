@@ -858,31 +858,73 @@ export default function PetFoodDB() {
               <p style={styles.modalBrand}>{selectedProduct.brand} · {selectedProduct.origin}</p>
             </div>
 
-            {/* 全營養標示 */}
+            {/* 全營養標示 - 改成表格樣式 */}
             <div style={styles.modalSection}>
               <h3 style={styles.sectionTitle}>🥗 完整營養標示（每100g）</h3>
-              <div style={styles.nutritionGridLarge}>
-                <NutritionCard label="熱量" value={selectedProduct.caloriesPer100g} unit="kcal" />
-                <NutritionCard label="蛋白質" value={selectedProduct.proteinPer100g} unit="g" />
-                <NutritionCard label="脂肪" value={selectedProduct.fatPer100g} unit="g" />
-                <NutritionCard label="碳水化合物" value={selectedProduct.carbsPer100g} unit="g" />
-                <NutritionCard label="纖維" value={selectedProduct.fiberPer100g} unit="g" />
-                <NutritionCard label="水分" value={selectedProduct.moisturePer100g} unit="g" />
-                <NutritionCard label="灰分" value={selectedProduct.ashPer100g} unit="g" />
-                <NutritionCard label="鈉" value={selectedProduct.sodiumPer100g} unit="mg" />
-                <NutritionCard label="鈣" value={selectedProduct.calciumPer100g} unit="mg" />
-                <NutritionCard label="磷" value={selectedProduct.phosphorusPer100g} unit="mg" />
-                <NutritionCard label="鉀" value={selectedProduct.potassiumPer100g} unit="mg" />
-                <NutritionCard label="鎂" value={selectedProduct.magnesiumPer100g} unit="mg" />
-                <NutritionCard label="鐵" value={selectedProduct.ironPer100g} unit="mg" />
-                <NutritionCard label="鋅" value={selectedProduct.zincPer100g} unit="mg" />
-                <NutritionCard label="維生素A" value={selectedProduct.vitaminAPer100g} unit="IU" />
-                <NutritionCard label="維生素D" value={selectedProduct.vitaminDPer100g} unit="IU" />
-                <NutritionCard label="維生素E" value={selectedProduct.vitaminEPer100g} unit="IU" />
-                <NutritionCard label="Omega-3" value={selectedProduct.omega3Per100g} unit="g" />
-                <NutritionCard label="Omega-6" value={selectedProduct.omega6Per100g} unit="g" />
-                <NutritionCard label="牛磺酸" value={selectedProduct.taurinePer100g} unit="mg" />
-              </div>
+              <table style={nutritionTableStyles.table}>
+                <tbody>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>熱量</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.caloriesPer100g} kcal</td>
+                    <td style={nutritionTableStyles.label}>蛋白質</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.proteinPer100g} g</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>脂肪</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.fatPer100g} g</td>
+                    <td style={nutritionTableStyles.label}>碳水化合物</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.carbsPer100g} g</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>纖維</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.fiberPer100g} g</td>
+                    <td style={nutritionTableStyles.label}>水分</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.moisturePer100g} g</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>灰分</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.ashPer100g} g</td>
+                    <td style={nutritionTableStyles.label}>鈉</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.sodiumPer100g} mg</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>鈣</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.calciumPer100g} mg</td>
+                    <td style={nutritionTableStyles.label}>磷</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.phosphorusPer100g} mg</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>鉀</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.potassiumPer100g} mg</td>
+                    <td style={nutritionTableStyles.label}>鎂</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.magnesiumPer100g} mg</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>鐵</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.ironPer100g} mg</td>
+                    <td style={nutritionTableStyles.label}>鋅</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.zincPer100g} mg</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>維生素A</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.vitaminAPer100g} IU</td>
+                    <td style={nutritionTableStyles.label}>維生素D</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.vitaminDPer100g} IU</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>維生素E</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.vitaminEPer100g} IU</td>
+                    <td style={nutritionTableStyles.label}>Omega-3</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.omega3Per100g} g</td>
+                  </tr>
+                  <tr>
+                    <td style={nutritionTableStyles.label}>Omega-6</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.omega6Per100g} g</td>
+                    <td style={nutritionTableStyles.label}>牛磺酸</td>
+                    <td style={nutritionTableStyles.value}>{selectedProduct.taurinePer100g} mg</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {/* 全成分 */}
@@ -1074,4 +1116,10 @@ const nutritionStyles: Record<string, React.CSSProperties> = {
   value: { fontSize: '16px', fontWeight: '700', color: '#FF6B35', display: 'block' },
   unit: { fontSize: '10px', color: '#999' },
   label: { fontSize: '10px', color: '#666', display: 'block', marginTop: '2px' }
+}
+
+const nutritionTableStyles: Record<string, React.CSSProperties> = {
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '13px' },
+  label: { padding: '6px 4px', color: '#666', borderBottom: '1px solid #F0F0F0' },
+  value: { padding: '6px 4px', color: '#FF6B35', fontWeight: '600', textAlign: 'right', borderBottom: '1px solid #F0F0F0' }
 }
