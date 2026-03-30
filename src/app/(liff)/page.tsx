@@ -265,7 +265,7 @@ export default function HomePage() {
       <div className="mx-4 mt-3 bg-white rounded-2xl ring-1 ring-gray-950/10 overflow-hidden">
         {/* 標題列 */}
         <button
-          onClick={() => router.push('/pet-food-db')}
+          onClick={() => router.push('/brands')}
           className="w-full p-4 text-left hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center justify-between">
@@ -275,7 +275,7 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="font-semibold text-gray-800">品牌總覽</p>
-                <p className="text-xs text-gray-400 mt-0.5">共 3,559 個品牌</p>
+                <p className="text-xs text-gray-400 mt-0.5">共 30 個精選品牌</p>
               </div>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -349,12 +349,35 @@ export default function HomePage() {
           
           {/* 查看更多 */}
           <button
-            onClick={() => router.push('/pet-food-db')}
+            onClick={() => router.push('/brands')}
             className="w-full mt-3 py-2 text-sm text-orange-500 font-medium hover:bg-orange-50 rounded-lg transition-colors"
           >
             查看全部品牌 →
           </button>
         </div>
+      </div>
+
+      {/* 食品資料庫連結 */}
+      <div className="mx-4 mt-3">
+        <button
+          onClick={() => router.push('/pet-food-db')}
+          className="w-full bg-white rounded-2xl ring-1 ring-gray-950/10 p-4 text-left hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl flex items-center justify-center text-white text-xl">
+                🔍
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">食品資料庫</p>
+                <p className="text-xs text-gray-400 mt-0.5">搜尋寵物食品・76,000+ 項產品</p>
+              </div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </button>
       </div>
 
       {/* 今日飲食記錄 */}
