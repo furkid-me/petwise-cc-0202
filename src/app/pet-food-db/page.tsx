@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // 示範資料（更完整的營養標示）
@@ -467,6 +467,25 @@ const PET_TYPE_BADGES: Record<string, { label: string; bg: string; color: string
 }
 
 export default function PetFoodDB() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <PetFoodDBContent />
+    </Suspense>
+  )
+}
+
+function Loading() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F5' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid #E0E0E0', borderTopColor: '#FF6B35', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: '#666', fontSize: '14px' }}>載入中...</p>
+      </div>
+    </div>
+  )
+}
+
+function PetFoodDBContent() {
   const [search, setSearch] = useState('')
   const [selectedPetType, setSelectedPetType] = useState('')
   const [selectedAge, setSelectedAge] = useState('全部')
