@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // 示範資料（更完整的營養標示）
 const DEMO_PRODUCTS = [
@@ -484,6 +485,18 @@ export default function PetFoodDB() {
   const [products, setProducts] = useState(DEMO_PRODUCTS)
   const [selectedProduct, setSelectedProduct] = useState<typeof DEMO_PRODUCTS[0] | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [brandFilter, setBrandFilter] = useState<string | null>(null)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // 讀取 URL 參數中的品牌
+  useEffect(() => {
+    const brandParam = searchParams.get('brand')
+    if (brandParam) {
+      setBrandFilter(decodeURIComponent(brandParam))
+      setSearch(decodeURIComponent(brandParam))
+    }
+  }, [searchParams])
 
   useEffect(() => {
     let filtered = DEMO_PRODUCTS
@@ -497,6 +510,11 @@ export default function PetFoodDB() {
         p.mainIngredients.some(i => i.toLowerCase().includes(s)) ||
         p.ingredients.toLowerCase().includes(s)
       )
+    }
+
+    // 品牌篩選（從品牌頁點擊而來）
+    if (brandFilter) {
+      filtered = filtered.filter(p => p.brand.includes(brandFilter))
     }
 
     // 寵物類型
@@ -977,6 +995,22 @@ export default function PetFoodDB() {
           </div>
         </div>
       )}
+
+      {/* Bottom Navigation */}
+      <div style={styles.bottomNav}>
+        <button style={styles.navBtn} onClick={() => router.push('/')}>
+          <span style={styles.navIcon}>🏠</span>
+          <span style={styles.navLabel}>首頁</span>
+        </button>
+        <button style={styles.navBtn} onClick={() => router.push('/brands')}>
+          <span style={styles.navIcon}>🏪</span>
+          <span style={styles.navLabel}>品牌</span>
+        </button>
+        <button style={{...styles.navBtn, ...styles.navBtnActive}}>
+          <span style={styles.navIcon}>🔍</span>
+          <span style={{...styles.navLabel, color: '#FF6B35'}}>食品庫</span>
+        </button>
+      </div>
     </div>
   )
 }
@@ -1088,6 +1122,40 @@ const styles: Record<string, React.CSSProperties> = {
   modal: { background: 'white', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '500px', maxHeight: '92vh', overflowY: 'auto' },
   modalHandle: { width: '40px', height: '4px', background: '#E0E0E0', borderRadius: '2px', margin: '12px auto' },
   closeBtn: { position: 'absolute', top: '12px', right: '12px', width: '32px', height: '32px', background: '#F5F5F5', border: 'none', borderRadius: '50%', fontSize: '16px', cursor: 'pointer' },
+  
+  bottomNav: {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    background: 'white',
+    borderTop: '1px solid #E0E0E0',
+    display: 'flex',
+    justifyContent: 'space-around',
+    padding: '8px 0',
+    paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+    zIndex: 100,
+  },
+  navBtn: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '8px 16px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  navBtnActive: {
+    color: '#FF6B35',
+  },
+  navIcon: {
+    fontSize: '24px',
+  },
+  navLabel: {
+    fontSize: '11px',
+    color: '#999',
+  },
   modalHeader: { padding: '0 20px 16px', borderBottom: '1px solid #E0E0E0' },
   modalBadges: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' },
   modalBadge: { padding: '4px 10px', background: '#F5F5F5', borderRadius: '6px', fontSize: '12px' },

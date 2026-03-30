@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 // 品牌資料（從 petfood_brands.json 整理）
-const BRANDS_DATA = [
+// 包含 ALL_BRANDS（含個人工作室，供搜尋用）和 VISIBLE_BRANDS（僅顯示於列表）
+const ALL_BRANDS = [
   { name: '皇家寵物食品', origin: '法國', productCount: 156, category: '國際知名品牌' },
   { name: '希爾思寵物食品', origin: '美國', productCount: 142, category: '國際知名品牌' },
   { name: '荒野饗宴', origin: '美國', productCount: 89, category: '國際知名品牌' },
@@ -21,7 +22,7 @@ const BRANDS_DATA = [
   { name: '維吉', origin: '加拿大', productCount: 30, category: '國際知名品牌' },
   { name: 'go!', origin: '加拿大', productCount: 28, category: '國際知名品牌' },
   { name: '耐吉斯', origin: '紐西蘭', productCount: 25, category: '國際知名品牌' },
-  { name: ' Halo', origin: '美國', productCount: 24, category: '國際知名品牌' },
+  { name: 'Halo', origin: '美國', productCount: 24, category: '國際知名品牌' },
   { name: 'now', origin: '加拿大', productCount: 22, category: '國際知名品牌' },
   { name: '【個人】楊甯喬', origin: '台灣', productCount: 18, category: '個人工作室' },
   { name: '【個人】黃如盈', origin: '台灣', productCount: 15, category: '個人工作室' },
@@ -37,6 +38,9 @@ const BRANDS_DATA = [
   { name: '【公司】寵物好事', origin: '台灣', productCount: 4, category: '台灣公司' },
 ]
 
+// 只顯示於列表的品牌（排除個人工作室）
+const VISIBLE_BRANDS = ALL_BRANDS.filter(b => b.category !== '個人工作室')
+
 const ORIGIN_FLAGS: Record<string, string> = {
   '法國': '🇫🇷',
   '美國': '🇺🇸',
@@ -50,31 +54,22 @@ const ORIGIN_FLAGS: Record<string, string> = {
   '韓國': '🇰🇷',
 }
 
-const ORIGIN_COLORS: Record<string, string> = {
-  '法國': 'bg-blue-100 text-blue-700',
-  '美國': 'bg-red-100 text-red-700',
-  '加拿大': 'bg-red-100 text-red-700',
-  '英國': 'bg-blue-100 text-blue-700',
-  '紐西蘭': 'bg-green-100 text-green-700',
-  '荷蘭': 'bg-orange-100 text-orange-700',
-  '台灣': 'bg-green-100 text-green-700',
-  '日本': 'bg-red-100 text-red-700',
-  '德國': 'bg-yellow-100 text-yellow-700',
-  '韓國': 'bg-blue-100 text-blue-700',
-}
-
 export default function BrandsPage() {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedBrand, setSelectedBrand] = useState<typeof ALL_BRANDS[0] | null>(null)
 
-  // 取得所有來源國
-  const origins = Array.from(new Set(BRANDS_DATA.map(b => b.origin)))
-  const categories = Array.from(new Set(BRANDS_DATA.map(b => b.category)))
+  // 取得所有來源國（從可顯示的品牌）
+  const origins = Array.from(new Set(VISIBLE_BRANDS.map(b => b.origin)))
+  const categories = Array.from(new Set(VISIBLE_BRANDS.map(b => b.category)))
 
-  // 過濾
-  let filtered = BRANDS_DATA
+  // 搜尋時包含個人工作室
+  const searchInAll = search.length > 0 ? ALL_BRANDS : VISIBLE_BRANDS
+  
+  // 過濾（列表中不顯示個人工作室）
+  let filtered = VISIBLE_BRANDS
   if (search) {
     filtered = filtered.filter(b => b.name.toLowerCase().includes(search.toLowerCase()))
   }
@@ -85,12 +80,19 @@ export default function BrandsPage() {
     filtered = filtered.filter(b => b.category === selectedCategory)
   }
 
+  // 點擊品牌查看產品列表
+  const handleBrandClick = (brand: typeof ALL_BRANDS[0]) => {
+    setSelectedBrand(brand)
+    // 跳轉到食品資料庫並帶上品牌參數
+    router.push(`/pet-food-db?brand=${encodeURIComponent(brand.name)}`)
+  }
+
   return (
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>🏪 品牌總覽</h1>
-        <p style={styles.subtitle}>共 {BRANDS_DATA.length} 個品牌</p>
+        <p style={styles.subtitle}>共 {VISIBLE_BRANDS.length} 個精選品牌</p>
       </div>
 
       {/* Search */}
@@ -154,7 +156,11 @@ export default function BrandsPage() {
       {/* Brand List */}
       <div style={styles.brandList}>
         {filtered.map((brand, index) => (
-          <div key={index} style={styles.brandCard}>
+          <div 
+            key={index} 
+            style={styles.brandCard}
+            onClick={() => handleBrandClick(brand)}
+          >
             <div style={styles.brandMain}>
               <div style={styles.brandAvatar}>
                 {brand.name.charAt(0)}
@@ -162,7 +168,7 @@ export default function BrandsPage() {
               <div style={styles.brandInfo}>
                 <div style={styles.brandName}>{brand.name}</div>
                 <div style={styles.brandMeta}>
-                  <span style={{...styles.originBadge, ...(ORIGIN_COLORS[brand.origin] ? {} : {})}}>
+                  <span style={styles.originBadge}>
                     {ORIGIN_FLAGS[brand.origin] || '🌍'} {brand.origin}
                   </span>
                   <span style={styles.categoryTag}>{brand.category}</span>
@@ -172,6 +178,9 @@ export default function BrandsPage() {
             <div style={styles.brandRight}>
               <div style={styles.productCount}>{brand.productCount}</div>
               <div style={styles.productLabel}>項產品</div>
+              <svg xmlns="http://www.w3.org/2000/svg" style={styles.arrowIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </div>
           </div>
         ))}
@@ -342,6 +351,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   brandRight: {
     textAlign: 'right',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: '2px',
   },
   productCount: {
     fontSize: '20px',
@@ -351,6 +364,12 @@ const styles: Record<string, React.CSSProperties> = {
   productLabel: {
     fontSize: '10px',
     color: '#999',
+  },
+  arrowIcon: {
+    width: '16px',
+    height: '16px',
+    color: '#CCC',
+    marginTop: '4px',
   },
   emptyState: {
     textAlign: 'center',
