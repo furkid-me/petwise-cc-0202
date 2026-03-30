@@ -5,14 +5,14 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 // 從食品資料庫 Demo 資料
 const DEMO_PRODUCTS: FoodProduct[] = [
-  { id: '1', name: '雞肉乾', brand: '皇家寵物食品', type: '零食', petType: ['dog_cat'], origin: '台灣', caloriesPer100g: 164.5, proteinPer100g: 12.8, fatPer100g: 3.0, carbsPer100g: 0.8, allergens: ['蛋'], mainIngredients: ['雞肉'], imageURL: '' },
-  { id: '2', name: '頂級無穀貓糧', brand: '皇家寵物食品', type: '乾飼糧', petType: ['cat'], origin: '法國', caloriesPer100g: 380.0, proteinPer100g: 40.0, fatPer100g: 18.0, carbsPer100g: 25.0, allergens: [], mainIngredients: ['雞肉', '火雞肉'], imageURL: '' },
-  { id: '3', name: '天然狗罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['dog'], origin: '美國', caloriesPer100g: 120.0, proteinPer100g: 10.0, fatPer100g: 7.0, carbsPer100g: 5.0, allergens: ['玉米', '大豆'], mainIngredients: ['牛肉', '胡蘿蔔'], imageURL: '' },
-  { id: '4', name: '貓咪化毛膏', brand: '荒野饗宴', type: '補助食品', petType: ['cat'], origin: '台灣', caloriesPer100g: 250.0, proteinPer100g: 5.0, fatPer100g: 15.0, carbsPer100g: 20.0, allergens: ['魚'], mainIngredients: ['魚油', '麥芽糊精'], imageURL: '' },
-  { id: '5', name: '低敏無穀狗糧', brand: '本能', type: '乾飼糧', petType: ['dog'], origin: '加拿大', caloriesPer100g: 360.0, proteinPer100g: 38.0, fatPer100g: 16.0, carbsPer100g: 28.0, allergens: [], mainIngredients: ['野豬肉', '鹿肉', '地瓜'], imageURL: '' },
-  { id: '6', name: '老貓腎臟配方罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['cat'], origin: '美國', caloriesPer100g: 100.0, proteinPer100g: 8.0, fatPer100g: 4.0, carbsPer100g: 8.0, allergens: [], mainIngredients: ['豬肉', '雞肝', '雞肉'], imageURL: '' },
-  { id: '7', name: '幼犬專用飼料', brand: '冠能寵物食品', type: '乾飼糧', petType: ['dog'], origin: '法國', caloriesPer100g: 350.0, proteinPer100g: 30.0, fatPer100g: 20.0, carbsPer100g: 30.0, allergens: ['玉米', '大豆', '小麥'], mainIngredients: ['雞肉粉', '小麥', '玉米', '米'], imageURL: '' },
-  { id: '8', name: '鮮食生鮮包', brand: '愛肯拿', type: '生鮮、冷凍', petType: ['dog_cat'], origin: '台灣', caloriesPer100g: 180.0, proteinPer100g: 15.0, fatPer100g: 12.0, carbsPer100g: 3.0, allergens: [], mainIngredients: ['雞胸肉', '南瓜', '胡蘿蔔'], imageURL: '' },
+  { id: '1', name: '雞肉乾', brand: '皇家寵物食品', type: '零食', petType: ['dog_cat'], origin: '台灣', kcalPer100g: 164.5, proteinPer100g: 12.8, fatPer100g: 3.0, carbsPer100g: 0.8, allergens: ['蛋'], mainIngredients: ['雞肉'], imageURL: '' },
+  { id: '2', name: '頂級無穀貓糧', brand: '皇家寵物食品', type: '乾飼糧', petType: ['cat'], origin: '法國', kcalPer100g: 380.0, proteinPer100g: 40.0, fatPer100g: 18.0, carbsPer100g: 25.0, allergens: [], mainIngredients: ['雞肉', '火雞肉'], imageURL: '' },
+  { id: '3', name: '天然狗罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['dog'], origin: '美國', kcalPer100g: 120.0, proteinPer100g: 10.0, fatPer100g: 7.0, carbsPer100g: 5.0, allergens: ['玉米', '大豆'], mainIngredients: ['牛肉', '胡蘿蔔'], imageURL: '' },
+  { id: '4', name: '貓咪化毛膏', brand: '荒野饗宴', type: '補助食品', petType: ['cat'], origin: '台灣', kcalPer100g: 250.0, proteinPer100g: 5.0, fatPer100g: 15.0, carbsPer100g: 20.0, allergens: ['魚'], mainIngredients: ['魚油', '麥芽糊精'], imageURL: '' },
+  { id: '5', name: '低敏無穀狗糧', brand: '本能', type: '乾飼糧', petType: ['dog'], origin: '加拿大', kcalPer100g: 360.0, proteinPer100g: 38.0, fatPer100g: 16.0, carbsPer100g: 28.0, allergens: [], mainIngredients: ['野豬肉', '鹿肉', '地瓜'], imageURL: '' },
+  { id: '6', name: '老貓腎臟配方罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['cat'], origin: '美國', kcalPer100g: 100.0, proteinPer100g: 8.0, fatPer100g: 4.0, carbsPer100g: 8.0, allergens: [], mainIngredients: ['豬肉', '雞肝', '雞肉'], imageURL: '' },
+  { id: '7', name: '幼犬專用飼料', brand: '冠能寵物食品', type: '乾飼糧', petType: ['dog'], origin: '法國', kcalPer100g: 350.0, proteinPer100g: 30.0, fatPer100g: 20.0, carbsPer100g: 30.0, allergens: ['玉米', '大豆', '小麥'], mainIngredients: ['雞肉粉', '小麥', '玉米', '米'], imageURL: '' },
+  { id: '8', name: '鮮食生鮮包', brand: '愛肯拿', type: '生鮮、冷凍', petType: ['dog_cat'], origin: '台灣', kcalPer100g: 180.0, proteinPer100g: 15.0, fatPer100g: 12.0, carbsPer100g: 3.0, allergens: [], mainIngredients: ['雞胸肉', '南瓜', '胡蘿蔔'], imageURL: '' },
 ]
 
 interface FoodProduct {
