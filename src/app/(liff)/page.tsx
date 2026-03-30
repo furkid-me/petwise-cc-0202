@@ -288,7 +288,7 @@ export default function HomePage() {
         <div className="px-4 pb-4">
           <p className="text-xs text-gray-400 mb-2">熱門品牌</p>
           <div className="space-y-2">
-            {/* 品牌項目 */}
+            {/* 品牌項目 - 只顯示前三 */}
             <div className="flex items-center justify-between py-2 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-lg text-xs flex items-center justify-center font-medium">皇</span>
@@ -303,47 +303,12 @@ export default function HomePage() {
               </div>
               <span className="text-xs text-gray-400">🇺🇸 美國</span>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+            <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 bg-green-100 text-green-600 rounded-lg text-xs flex items-center justify-center font-medium">野</span>
                 <span className="text-sm text-gray-700">荒野饗宴</span>
               </div>
               <span className="text-xs text-gray-400">🇺🇸 美國</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-lg text-xs flex items-center justify-center font-medium">冠</span>
-                <span className="text-sm text-gray-700">冠能寵物食品</span>
-              </div>
-              <span className="text-xs text-gray-400">🇺🇸 美國</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 bg-red-100 text-red-600 rounded-lg text-xs flex items-center justify-center font-medium">本</span>
-                <span className="text-sm text-gray-700">本能</span>
-              </div>
-              <span className="text-xs text-gray-400">🇨🇦 加拿大</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 bg-yellow-100 text-yellow-600 rounded-lg text-xs flex items-center justify-center font-medium">美</span>
-                <span className="text-sm text-gray-700">美士</span>
-              </div>
-              <span className="text-xs text-gray-400">🇺🇸 美國</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 bg-teal-100 text-teal-600 rounded-lg text-xs flex items-center justify-center font-medium">愛</span>
-                <span className="text-sm text-gray-700">愛肯拿</span>
-              </div>
-              <span className="text-xs text-gray-400">🇨🇦 加拿大</span>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 bg-orange-100 text-orange-500 rounded-lg text-xs flex items-center justify-center font-medium">渴</span>
-                <span className="text-sm text-gray-700">渴望</span>
-              </div>
-              <span className="text-xs text-gray-400">🇨🇦 加拿大</span>
             </div>
           </div>
           
