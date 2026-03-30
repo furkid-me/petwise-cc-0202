@@ -27,6 +27,7 @@ interface FormData {
   specialReaction: string;
   photoUrl: string;
   mainIngredients: string[];
+  kcalPer100g: number | null;
 }
 
 export default function NewDiaryPage() {
@@ -49,6 +50,7 @@ export default function NewDiaryPage() {
     specialReaction: '',
     photoUrl: '',
     mainIngredients: [],
+    kcalPer100g: null,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,19 +71,34 @@ export default function NewDiaryPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      // 當輸入份量時，自動計算熱量
+      if (name === 'amountValue' && prev.kcalPer100g && value) {
+        const amount = parseFloat(value);
+        if (!isNaN(amount)) {
+          updated.totalKcal = (prev.kcalPer100g * amount / 100).toFixed(2);
+        }
+      }
+      return updated;
+    });
   };
 
   const handleProductSelect = (product: FoodProduct) => {
-    setFormData((prev) => ({
-      ...prev,
-      foodProductId: product.id,
-      foodName: product.name,
-      foodType: product.type,
-      totalKcal: product.kcalPer100g && prev.amountValue
-        ? (product.kcalPer100g * parseFloat(prev.amountValue) / 100).toFixed(2)
-        : prev.totalKcal,
-    }));
+    setFormData((prev) => {
+      const amount = parseFloat(prev.amountValue);
+      const calculatedKcal = product.kcalPer100g && !isNaN(amount)
+        ? (product.kcalPer100g * amount / 100).toFixed(2)
+        : prev.totalKcal;
+      return {
+        ...prev,
+        foodProductId: product.id,
+        foodName: product.name,
+        foodType: product.type,
+        kcalPer100g: product.kcalPer100g,
+        totalKcal: calculatedKcal,
+      };
+    });
   };
 
   const handleSubmitManual = async (e: React.FormEvent) => {
