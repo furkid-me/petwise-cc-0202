@@ -140,8 +140,8 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
 
       {/* Hero — 左對齊 */}
-      <div className="bg-gradient-to-br from-violet-500 via-indigo-600 to-indigo-700 text-white px-5 pt-5 pb-16">
-        <p className="font-mono text-xs uppercase tracking-wider text-indigo-200/80 mb-1">
+      <div className="bg-gradient-to-br from-[#FB9966] via-[#FB9966] to-[#B5495B] text-white px-5 pt-5 pb-16">
+        <p className="font-mono text-xs uppercase tracking-wider text-orange-100 mb-1">
           {formattedDate}
         </p>
         <div className="flex items-start justify-between">
@@ -166,7 +166,7 @@ export default function HomePage() {
           今日營養進度
         </p>
         {latestWeight && (
-          <p className="text-xs text-indigo-600 font-medium mb-3">
+          <p className="text-xs text-orange-500 font-medium mb-3">
             最新體重：{Number(latestWeight?.weightKg || 0).toFixed(1)} kg
           </p>
         )}
@@ -220,7 +220,7 @@ export default function HomePage() {
           </p>
           <button
             onClick={() => router.push('/expenses')}
-            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+            className="text-xs text-orange-500 hover:text-orange-600 font-medium"
           >
             詳情 →
           </button>
@@ -270,7 +270,7 @@ export default function HomePage() {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center text-white text-xl">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#FB9966] to-[#B5495B] rounded-xl flex items-center justify-center text-white text-xl">
                 🏪
               </div>
               <div>
@@ -340,7 +340,7 @@ export default function HomePage() {
             </div>
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-lg text-xs flex items-center justify-center font-medium">渴</span>
+                <span className="w-6 h-6 bg-orange-100 text-orange-500 rounded-lg text-xs flex items-center justify-center font-medium">渴</span>
                 <span className="text-sm text-gray-700">渴望</span>
               </div>
               <span className="text-xs text-gray-400">🇨🇦 加拿大</span>
@@ -388,7 +388,7 @@ export default function HomePage() {
           </p>
           <button
             onClick={() => router.push('/diary/new')}
-            className="h-9 px-4 rounded-full bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+            className="h-9 px-4 rounded-full bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition-colors"
           >
             + 新增
           </button>
@@ -434,31 +434,31 @@ export default function HomePage() {
 
       {/* 底部導覽列 */}
       <div className="h-16 bg-white ring-1 ring-inset ring-gray-950/[0.08] flex justify-around items-center fixed bottom-0 left-0 right-0">
-        <button onClick={() => router.push('/')} className="flex flex-col items-center text-indigo-600">
+        <button onClick={() => router.push('/')} className="flex flex-col items-center text-orange-500">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
           <span className="text-xs">首頁</span>
         </button>
-        <button onClick={() => router.push('/diary/new')} className="flex flex-col items-center text-gray-400 hover:text-indigo-600 transition-colors">
+        <button onClick={() => router.push('/diary/new')} className="flex flex-col items-center text-gray-400 hover:text-orange-500 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
           <span className="text-xs">飲食</span>
         </button>
-        <button onClick={() => router.push('/health')} className="flex flex-col items-center text-gray-400 hover:text-indigo-600 transition-colors">
+        <button onClick={() => router.push('/health')} className="flex flex-col items-center text-gray-400 hover:text-orange-500 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
           <span className="text-xs">健康</span>
         </button>
-        <button onClick={() => router.push('/reminders')} className="flex flex-col items-center text-gray-400 hover:text-indigo-600 transition-colors">
+        <button onClick={() => router.push('/reminders')} className="flex flex-col items-center text-gray-400 hover:text-orange-500 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
           <span className="text-xs">提醒</span>
         </button>
-        <button onClick={() => router.push('/profile')} className="flex flex-col items-center text-gray-400 hover:text-indigo-600 transition-colors">
+        <button onClick={() => router.push('/profile')} className="flex flex-col items-center text-gray-400 hover:text-orange-500 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>

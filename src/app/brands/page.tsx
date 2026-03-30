@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-// 品牌資料（從 petfood_brands.json 整理）
-// 包含 ALL_BRANDS（含個人工作室，供搜尋用）和 VISIBLE_BRANDS（僅顯示於列表）
+// 品牌資料
 const ALL_BRANDS = [
   { name: '皇家寵物食品', origin: '法國', productCount: 156, category: '國際知名品牌' },
   { name: '希爾思寵物食品', origin: '美國', productCount: 142, category: '國際知名品牌' },
@@ -38,20 +37,28 @@ const ALL_BRANDS = [
   { name: '【公司】寵物好事', origin: '台灣', productCount: 4, category: '台灣公司' },
 ]
 
-// 只顯示於列表的品牌（排除個人工作室）
 const VISIBLE_BRANDS = ALL_BRANDS.filter(b => b.category !== '個人工作室')
 
 const ORIGIN_FLAGS: Record<string, string> = {
-  '法國': '🇫🇷',
-  '美國': '🇺🇸',
-  '加拿大': '🇨🇦',
-  '英國': '🇬🇧',
-  '紐西蘭': '🇳🇿',
-  '荷蘭': '🇳🇱',
-  '台灣': '🇹🇼',
-  '日本': '🇯🇵',
-  '德國': '🇩🇪',
-  '韓國': '🇰🇷',
+  '法國': '🇫🇷', '美國': '🇺🇸', '加拿大': '🇨🇦', '英國': '🇬🇧',
+  '紐西蘭': '🇳🇿', '荷蘭': '🇳🇱', '台灣': '🇹🇼', '日本': '🇯🇵', '德國': '🇩🇪',
+}
+
+const DESIGN = {
+  colors: {
+    primary: '#FB9966',
+    primaryDark: '#A36B4A',
+    secondary: '#B5495B',
+    text: '#554236',
+    textSecondary: '#7D6559',
+    textMuted: '#A8958C',
+    bg: '#FDFCFB',
+    surface: '#FFFFFF',
+    border: '#EDE6E1',
+  },
+  radius: { sm: '6px', md: '12px', lg: '16px', full: '9999px' },
+  spacing: { xs: '4px', sm: '8px', md: '16px', lg: '24px' },
+  transition: '200ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
 }
 
 export default function BrandsPage() {
@@ -59,16 +66,10 @@ export default function BrandsPage() {
   const [search, setSearch] = useState('')
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [selectedBrand, setSelectedBrand] = useState<typeof ALL_BRANDS[0] | null>(null)
 
-  // 取得所有來源國（從可顯示的品牌）
   const origins = Array.from(new Set(VISIBLE_BRANDS.map(b => b.origin)))
   const categories = Array.from(new Set(VISIBLE_BRANDS.map(b => b.category)))
 
-  // 搜尋時包含個人工作室
-  const searchInAll = search.length > 0 ? ALL_BRANDS : VISIBLE_BRANDS
-  
-  // 過濾（列表中不顯示個人工作室）
   let filtered = VISIBLE_BRANDS
   if (search) {
     filtered = filtered.filter(b => b.name.toLowerCase().includes(search.toLowerCase()))
@@ -80,46 +81,73 @@ export default function BrandsPage() {
     filtered = filtered.filter(b => b.category === selectedCategory)
   }
 
-  // 點擊品牌查看產品列表
   const handleBrandClick = (brand: typeof ALL_BRANDS[0]) => {
-    setSelectedBrand(brand)
-    // 跳轉到食品資料庫並帶上品牌參數
     router.push(`/pet-food-db?brand=${encodeURIComponent(brand.name)}`)
   }
 
   return (
-    <div style={styles.container}>
+    <div style={{ minHeight: '100vh', background: DESIGN.colors.bg, paddingBottom: '80px' }}>
       {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.title}>🏪 品牌總覽</h1>
-        <p style={styles.subtitle}>共 {VISIBLE_BRANDS.length} 個精選品牌</p>
-      </div>
-
-      {/* Search */}
-      <div style={styles.searchSection}>
-        <input
-          type="text"
-          placeholder="搜尋品牌..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={styles.searchInput}
-        />
-      </div>
+      <header style={{ background: `linear-gradient(135deg, ${DESIGN.colors.primary} 0%, ${DESIGN.colors.secondary} 100%)`, padding: `${DESIGN.spacing.lg} ${DESIGN.spacing.md}`, paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'white', marginBottom: DESIGN.spacing.md, letterSpacing: '-0.02em' }}>🏪 品牌總覽</h1>
+        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.85)', marginBottom: DESIGN.spacing.md }}>共 {VISIBLE_BRANDS.length} 個精選品牌</p>
+        
+        {/* Search */}
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="搜尋品牌..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '14px 16px 14px 44px',
+              border: 'none',
+              borderRadius: DESIGN.radius.md,
+              fontSize: '15px',
+              background: 'rgba(255,255,255,0.98)',
+              color: DESIGN.colors.text,
+              outline: 'none',
+            }}
+          />
+          <svg style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: DESIGN.colors.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+        </div>
+      </header>
 
       {/* Origin Filter */}
-      <div style={styles.filterSection}>
-        <div style={styles.filterScroll}>
+      <div style={{ padding: `${DESIGN.spacing.md} ${DESIGN.spacing.md} ${DESIGN.spacing.sm}`, borderBottom: `1px solid ${DESIGN.colors.border}`, background: DESIGN.colors.surface, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: DESIGN.spacing.sm, minWidth: 'max-content' }}>
           <button
-            style={{...styles.filterChip, ...(selectedOrigin === null ? styles.filterChipActive : {})}}
             onClick={() => setSelectedOrigin(null)}
+            style={{
+              padding: '8px 14px',
+              background: selectedOrigin === null ? DESIGN.colors.primary : DESIGN.colors.bg,
+              color: selectedOrigin === null ? 'white' : DESIGN.colors.text,
+              border: 'none',
+              borderRadius: DESIGN.radius.full,
+              fontSize: '13px',
+              cursor: 'pointer',
+              transition: DESIGN.transition,
+            }}
           >
             全部
           </button>
           {origins.map(origin => (
             <button
               key={origin}
-              style={{...styles.filterChip, ...(selectedOrigin === origin ? styles.filterChipActive : {})}}
               onClick={() => setSelectedOrigin(origin === selectedOrigin ? null : origin)}
+              style={{
+                padding: '8px 14px',
+                background: selectedOrigin === origin ? DESIGN.colors.primary : DESIGN.colors.bg,
+                color: selectedOrigin === origin ? 'white' : DESIGN.colors.text,
+                border: 'none',
+                borderRadius: DESIGN.radius.full,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: DESIGN.transition,
+              }}
             >
               {ORIGIN_FLAGS[origin] || '🌍'} {origin}
             </button>
@@ -128,19 +156,35 @@ export default function BrandsPage() {
       </div>
 
       {/* Category Filter */}
-      <div style={styles.filterSection}>
-        <div style={styles.filterScroll}>
+      <div style={{ padding: `${DESIGN.spacing.sm} ${DESIGN.spacing.md}`, borderBottom: `1px solid ${DESIGN.colors.border}`, background: DESIGN.colors.surface, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: DESIGN.spacing.sm, minWidth: 'max-content' }}>
           <button
-            style={{...styles.categoryChip, ...(selectedCategory === null ? styles.categoryChipActive : {})}}
             onClick={() => setSelectedCategory(null)}
+            style={{
+              padding: '6px 12px',
+              background: selectedCategory === null ? DESIGN.colors.secondary : DESIGN.colors.bg,
+              color: selectedCategory === null ? 'white' : DESIGN.colors.textSecondary,
+              border: 'none',
+              borderRadius: DESIGN.radius.full,
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
           >
             所有類型
           </button>
           {categories.map(cat => (
             <button
               key={cat}
-              style={{...styles.categoryChip, ...(selectedCategory === cat ? styles.categoryChipActive : {})}}
               onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+              style={{
+                padding: '6px 12px',
+                background: selectedCategory === cat ? DESIGN.colors.secondary : DESIGN.colors.bg,
+                color: selectedCategory === cat ? 'white' : DESIGN.colors.textSecondary,
+                border: 'none',
+                borderRadius: DESIGN.radius.full,
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
             >
               {cat}
             </button>
@@ -149,267 +193,94 @@ export default function BrandsPage() {
       </div>
 
       {/* Results Count */}
-      <div style={styles.resultsHeader}>
-        <span style={styles.resultsCount}>共 {filtered.length} 個品牌</span>
+      <div style={{ padding: DESIGN.spacing.md }}>
+        <p style={{ fontSize: '13px', color: DESIGN.colors.textMuted }}>
+          共 <strong style={{ color: DESIGN.colors.text }}>{filtered.length}</strong> 個品牌
+        </p>
       </div>
 
       {/* Brand List */}
-      <div style={styles.brandList}>
+      <div style={{ padding: `0 ${DESIGN.spacing.md}`, display: 'flex', flexDirection: 'column', gap: DESIGN.spacing.sm }}>
         {filtered.map((brand, index) => (
-          <div 
-            key={index} 
-            style={styles.brandCard}
+          <div
+            key={index}
             onClick={() => handleBrandClick(brand)}
+            style={{
+              background: DESIGN.colors.surface,
+              borderRadius: DESIGN.radius.lg,
+              padding: DESIGN.spacing.md,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              boxShadow: '0 1px 3px rgba(85,66,54,0.06)',
+              cursor: 'pointer',
+              transition: DESIGN.transition,
+              border: `1px solid ${DESIGN.colors.border}`,
+              animation: `fadeIn 200ms ease-out ${index * 30}ms both`,
+            }}
           >
-            <div style={styles.brandMain}>
-              <div style={styles.brandAvatar}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.md }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: `linear-gradient(135deg, ${DESIGN.colors.primary} 0%, ${DESIGN.colors.secondary} 100%)`,
+                borderRadius: DESIGN.radius.md,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '18px',
+                fontWeight: '700',
+              }}>
                 {brand.name.charAt(0)}
               </div>
-              <div style={styles.brandInfo}>
-                <div style={styles.brandName}>{brand.name}</div>
-                <div style={styles.brandMeta}>
-                  <span style={styles.originBadge}>
-                    {ORIGIN_FLAGS[brand.origin] || '🌍'} {brand.origin}
-                  </span>
-                  <span style={styles.categoryTag}>{brand.category}</span>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: '600', color: DESIGN.colors.text, marginBottom: '2px' }}>{brand.name}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.sm }}>
+                  <span style={{ fontSize: '12px', color: DESIGN.colors.textMuted }}>{ORIGIN_FLAGS[brand.origin] || '🌍'} {brand.origin}</span>
+                  <span style={{ fontSize: '11px', color: DESIGN.colors.textMuted }}>·</span>
+                  <span style={{ fontSize: '12px', color: DESIGN.colors.primary, fontWeight: '500' }}>{brand.category}</span>
                 </div>
               </div>
             </div>
-            <div style={styles.brandRight}>
-              <div style={styles.productCount}>{brand.productCount}</div>
-              <div style={styles.productLabel}>項產品</div>
-              <svg xmlns="http://www.w3.org/2000/svg" style={styles.arrowIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.md }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: DESIGN.colors.primary }}>{brand.productCount}</div>
+                <div style={{ fontSize: '10px', color: DESIGN.colors.textMuted }}>項產品</div>
+              </div>
+              <svg style={{ width: '16px', height: '16px', color: DESIGN.colors.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path d="M9 5l7 7-7 7" />
               </svg>
             </div>
           </div>
         ))}
 
         {filtered.length === 0 && (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyIcon}>🔍</div>
-            <p>找不到符合的品牌</p>
+          <div style={{ textAlign: 'center', padding: DESIGN.spacing.lg * 2 }}>
+            <div style={{ fontSize: '48px', marginBottom: DESIGN.spacing.md }}>🔍</div>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: DESIGN.colors.text, marginBottom: '4px' }}>找不到符合的品牌</h3>
+            <p style={{ fontSize: '14px', color: DESIGN.colors.textMuted }}>試試不同的搜尋條件</p>
           </div>
         )}
       </div>
 
+      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+
       {/* Bottom Nav */}
-      <div style={styles.bottomNav}>
-        <button style={styles.navBtn} onClick={() => router.push('/')}>
-          <span style={styles.navIcon}>🏠</span>
-          <span style={styles.navLabel}>首頁</span>
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: DESIGN.colors.surface, borderTop: `1px solid ${DESIGN.colors.border}`, display: 'flex', justifyContent: 'space-around', padding: '8px 0', paddingBottom: 'max(8px, env(safe-area-inset-bottom))', zIndex: 100 }}>
+        <button onClick={() => router.push('/')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <span style={{ fontSize: '24px' }}>🏠</span>
+          <span style={{ fontSize: '11px', color: DESIGN.colors.textMuted }}>首頁</span>
         </button>
-        <button style={{...styles.navBtn, ...styles.navBtnActive}}>
-          <span style={styles.navIcon}>🏪</span>
-          <span style={{...styles.navLabel, color: '#FF6B35'}}>品牌</span>
+        <button style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <span style={{ fontSize: '24px' }}>🏪</span>
+          <span style={{ fontSize: '11px', color: DESIGN.colors.primary, fontWeight: '600' }}>品牌</span>
         </button>
-        <button style={styles.navBtn} onClick={() => router.push('/pet-food-db')}>
-          <span style={styles.navIcon}>🔍</span>
-          <span style={styles.navLabel}>食品庫</span>
+        <button onClick={() => router.push('/pet-food-db')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <span style={{ fontSize: '24px' }}>🔍</span>
+          <span style={{ fontSize: '11px', color: DESIGN.colors.textMuted }}>食品庫</span>
         </button>
-      </div>
+      </nav>
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#F5F5F5',
-    paddingBottom: '80px',
-  },
-  header: {
-    background: 'linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%)',
-    color: 'white',
-    padding: '20px 16px',
-  },
-  title: {
-    fontSize: '22px',
-    fontWeight: '600',
-    marginBottom: '4px',
-  },
-  subtitle: {
-    fontSize: '13px',
-    opacity: 0.9,
-  },
-  searchSection: {
-    padding: '12px 16px',
-    background: 'white',
-  },
-  searchInput: {
-    width: '100%',
-    padding: '12px 16px',
-    border: '1px solid #E0E0E0',
-    borderRadius: '12px',
-    fontSize: '15px',
-    outline: 'none',
-  },
-  filterSection: {
-    padding: '10px 16px',
-    background: 'white',
-    borderBottom: '1px solid #F0F0F0',
-  },
-  filterScroll: {
-    display: 'flex',
-    gap: '8px',
-    overflowX: 'auto',
-    paddingBottom: '4px',
-  },
-  filterChip: {
-    padding: '8px 14px',
-    background: '#F5F5F5',
-    border: 'none',
-    borderRadius: '20px',
-    fontSize: '13px',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
-  filterChipActive: {
-    background: '#FF6B35',
-    color: 'white',
-  },
-  categoryChip: {
-    padding: '6px 12px',
-    background: '#F5F5F5',
-    border: 'none',
-    borderRadius: '16px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
-  categoryChipActive: {
-    background: '#E3F2FD',
-    color: '#1976D2',
-    fontWeight: '500',
-  },
-  resultsHeader: {
-    padding: '12px 16px',
-  },
-  resultsCount: {
-    fontSize: '13px',
-    color: '#666',
-  },
-  brandList: {
-    padding: '0 16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-  },
-  brandCard: {
-    background: 'white',
-    borderRadius: '14px',
-    padding: '14px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-  },
-  brandMain: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  brandAvatar: {
-    width: '44px',
-    height: '44px',
-    background: 'linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%)',
-    borderRadius: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    fontSize: '18px',
-    fontWeight: '600',
-  },
-  brandInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  brandName: {
-    fontSize: '15px',
-    fontWeight: '600',
-    color: '#1A1A2E',
-  },
-  brandMeta: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-  },
-  originBadge: {
-    padding: '2px 8px',
-    background: '#F5F5F5',
-    borderRadius: '6px',
-    fontSize: '11px',
-  },
-  categoryTag: {
-    padding: '2px 8px',
-    background: '#FFF3ED',
-    color: '#FF6B35',
-    borderRadius: '6px',
-    fontSize: '11px',
-  },
-  brandRight: {
-    textAlign: 'right',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: '2px',
-  },
-  productCount: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#FF6B35',
-  },
-  productLabel: {
-    fontSize: '10px',
-    color: '#999',
-  },
-  arrowIcon: {
-    width: '16px',
-    height: '16px',
-    color: '#CCC',
-    marginTop: '4px',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '60px 20px',
-  },
-  emptyIcon: {
-    fontSize: '48px',
-    marginBottom: '12px',
-  },
-  bottomNav: {
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: 'white',
-    borderTop: '1px solid #E0E0E0',
-    display: 'flex',
-    justifyContent: 'space-around',
-    padding: '8px 0',
-    paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
-    zIndex: 100,
-  },
-  navBtn: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '8px 16px',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  navBtnActive: {
-    color: '#FF6B35',
-  },
-  navIcon: {
-    fontSize: '24px',
-  },
-  navLabel: {
-    fontSize: '11px',
-    color: '#999',
-  },
 }
