@@ -562,7 +562,7 @@ const styles: Record<string, React.CSSProperties> = {
   filterLabel: { fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '10px', display: 'block' },
   
   petTypeRow: { display: 'flex', gap: '8px' },
-  petTypeBtn: { flex: 1, padding: '10px', background: '#F5F5F5', border: '2px solid transparent', borderRadius: '10px', fontSize: '14px', cursor: 'pointer },
+  petTypeBtn: { flex: 1, padding: '10px', background: '#F5F5F5', border: '2px solid transparent', borderRadius: '10px', fontSize: '14px', cursor: 'pointer' },
   petTypeBtnActive: { background: '#FFF3ED', borderColor: '#FF6B35', color: '#FF6B35' },
   
   ageRow: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
