@@ -474,11 +474,11 @@ export default function PetFoodDB() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [sortBy, setSortBy] = useState('calories-asc')
   
-  // Range sliders
+  // Range sliders (磷的單位是mg，所以範圍要放大)
   const [calorieRange, setCalorieRange] = useState<[number, number]>([0, 500])
   const [proteinRange, setProteinRange] = useState<[number, number]>([0, 50])
   const [fatRange, setFatRange] = useState<[number, number]>([0, 30])
-  const [phosphorusRange, setPhosphorusRange] = useState<[number, number]>([0, 2])
+  const [phosphorusRange, setPhosphorusRange] = useState<[number, number]>([0, 2000]) // mg為單位
   
   const [showFilters, setShowFilters] = useState(false)
   const [products, setProducts] = useState(DEMO_PRODUCTS)
@@ -576,7 +576,7 @@ export default function PetFoodDB() {
     setCalorieRange([0, 500])
     setProteinRange([0, 50])
     setFatRange([0, 30])
-    setPhosphorusRange([0, 2])
+    setPhosphorusRange([0, 2000])
   }
 
   const activeFilterCount = [
@@ -588,7 +588,7 @@ export default function PetFoodDB() {
     calorieRange[0] > 0 || calorieRange[1] < 500,
     proteinRange[0] > 0 || proteinRange[1] < 50,
     fatRange[0] > 0 || fatRange[1] < 30,
-    phosphorusRange[0] > 0 || phosphorusRange[1] < 2
+    phosphorusRange[0] > 0 || phosphorusRange[1] < 2000
   ].filter(Boolean).length
 
   return (
@@ -711,7 +711,7 @@ export default function PetFoodDB() {
                 <RangeSlider label="熱量 (kcal/100g)" min={0} max={500} value={calorieRange} onChange={setCalorieRange} unit="kcal" />
                 <RangeSlider label="蛋白質 (g/100g)" min={0} max={50} value={proteinRange} onChange={setProteinRange} unit="g" />
                 <RangeSlider label="脂肪 (g/100g)" min={0} max={30} value={fatRange} onChange={setFatRange} unit="g" />
-                <RangeSlider label="磷 (g/100g)" min={0} max={2} value={phosphorusRange} onChange={setPhosphorusRange} unit="g" step={0.1} />
+                <RangeSlider label="磷 (mg/100g)" min={0} max={2000} value={phosphorusRange} onChange={setPhosphorusRange} unit="mg" step={10} />
               </div>
             )}
           </div>
