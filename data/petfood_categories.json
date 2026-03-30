@@ -1,0 +1,44 @@
+[
+  {
+    "id": "891cd12b-98cc-463b-8715-dad38be181bc",
+    "name": "零食",
+    "description": "",
+    "sortOrder": 0
+  },
+  {
+    "id": "ba135477-95a3-479a-91a6-d6abd2cad7d5",
+    "name": "罐頭",
+    "description": "",
+    "sortOrder": 0
+  },
+  {
+    "id": "8753b1ac-5a35-48d2-99ab-86178cae6862",
+    "name": "乾飼糧",
+    "description": "",
+    "sortOrder": 0
+  },
+  {
+    "id": "68ec259e-4e4d-45fd-85e2-142b7cf80fc5",
+    "name": "補助食品",
+    "description": "",
+    "sortOrder": 0
+  },
+  {
+    "id": "00b1090f-29d8-4c4c-b4ec-24aef4ad0783",
+    "name": "生鮮/冷凍",
+    "description": "",
+    "sortOrder": 0
+  },
+  {
+    "id": "98d8a90d-82c1-4296-9c07-aa4d140f45bb",
+    "name": "潔牙骨",
+    "description": "",
+    "sortOrder": 0
+  },
+  {
+    "id": "029496b5-a90e-49f1-b28b-c32257cbe959",
+    "name": "半溼性飼糧",
+    "description": "",
+    "sortOrder": 0
+  }
+]

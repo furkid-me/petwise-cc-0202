@@ -261,6 +261,36 @@ export default function HomePage() {
       {/* Section 分隔線 */}
       <div className="mx-4 border-t border-gray-950/[0.08]" />
 
+      {/* 品牌總覽卡片 */}
+      <div className="mx-4 mt-3">
+        <button
+          onClick={() => router.push('/pet-food-db')}
+          className="w-full bg-white rounded-2xl ring-1 ring-gray-950/10 p-4 text-left hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center text-white text-xl">
+                🏪
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">品牌總覽</p>
+                <p className="text-xs text-gray-400 mt-0.5">瀏覽所有寵物食品品牌</p>
+              </div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            <span className="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-lg">零食</span>
+            <span className="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-lg">罐頭</span>
+            <span className="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-lg">乾飼糧</span>
+            <span className="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-lg">補助食品</span>
+            <span className="text-xs text-gray-400 self-center ml-1">等...</span>
+          </div>
+        </button>
+      </div>
+
       {/* 今日飲食記錄 */}
       <div className="mx-4 mt-3 bg-white rounded-2xl ring-1 ring-gray-950/10 p-4 mb-24 flex-1">
         <div className="flex justify-between items-center mb-3">
