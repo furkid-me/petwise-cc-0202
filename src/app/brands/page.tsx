@@ -70,8 +70,8 @@ export default function BrandsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   // 取得所有來源國
-  const origins = [...new Set(BRANDS_DATA.map(b => b.origin))]
-  const categories = [...new Set(BRANDS_DATA.map(b => b.category))]
+  const origins = Array.from(new Set(BRANDS_DATA.map(b => b.origin)))
+  const categories = Array.from(new Set(BRANDS_DATA.map(b => b.category)))
 
   // 過濾
   let filtered = BRANDS_DATA
