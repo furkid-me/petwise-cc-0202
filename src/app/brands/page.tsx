@@ -256,7 +256,7 @@ export default function BrandsPage() {
         ))}
 
         {filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: DESIGN.spacing.lg * 2 }}>
+          <div style={{ textAlign: 'center', padding: `${parseInt(DESIGN.spacing.lg) * 2}px` }}>
             <div style={{ fontSize: '48px', marginBottom: DESIGN.spacing.md }}>🔍</div>
             <h3 style={{ fontSize: '16px', fontWeight: '600', color: DESIGN.colors.text, marginBottom: '4px' }}>找不到符合的品牌</h3>
             <p style={{ fontSize: '14px', color: DESIGN.colors.textMuted }}>試試不同的搜尋條件</p>

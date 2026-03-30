@@ -217,7 +217,7 @@ function PetFoodDBContent() {
   return (
     <div style={{ minHeight: '100vh', background: DESIGN.colors.bg, paddingBottom: '80px' }}>
       {/* Header */}
-      <header style={{ background: `linear-gradient(135deg, ${DESIGN.colors.primary} 0%, ${DESIGN.colors.primaryLight} 100%)`, color: 'white', padding: `${DESIGN.spacing.lg} ${DESIGN.spacing.md}`, paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
+      <header style={{ background: `linear-gradient(135deg, ${DESIGN.colors.primary} 0%, ${DESIGN.colors.primary} 100%)`, color: 'white', padding: `${DESIGN.spacing.lg} ${DESIGN.spacing.md}`, paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
         <h1 style={{ fontSize: '22px', fontWeight: '600', marginBottom: DESIGN.spacing.md, letterSpacing: '-0.02em' }}>寵物食品庫</h1>
         
         {/* Search Bar */}
