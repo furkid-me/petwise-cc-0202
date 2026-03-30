@@ -536,6 +536,9 @@ function PetFoodDBContent() {
       filtered = filtered.filter(p => p.brand.includes(brandFilter))
     }
 
+    // 排除個人工作室的產品
+    filtered = filtered.filter(p => !p.brand.includes('【個人】'))
+
     // 寵物類型
     if (selectedPetType) {
       filtered = filtered.filter(p => p.petType.includes(selectedPetType))
