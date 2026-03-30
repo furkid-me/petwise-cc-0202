@@ -2,28 +2,437 @@
 
 import { useState, useEffect } from 'react'
 
-// 示範資料
+// 示範資料（更完整的營養標示）
 const DEMO_PRODUCTS = [
-  { id: '1', name: '雞肉乾', brand: '【個人】楊甯喬', type: '零食', petType: ['dog_cat'], ageGroup: ['全齡'], origin: '台灣', caloriesPer100g: 164.5, proteinPer100g: 12.8, fatPer100g: 3.0, carbsPer100g: 0.8, phosphorusPer100g: 0.1, allergens: ['蛋'], mainIngredients: ['雞肉'], specialTags: [], usageMethod: '請將零食撥開或剪成小塊', storageMethod: '冷藏保存' },
-  { id: '2', name: '羊奶荷包蛋', brand: '【個人】楊甯喬', type: '零食', petType: ['dog_cat'], ageGroup: ['全齡'], origin: '台灣', caloriesPer100g: 46.2, proteinPer100g: 8.5, fatPer100g: 9.6, carbsPer100g: 1.2, phosphorusPer100g: 0.08, allergens: ['蛋'], mainIngredients: ['羊肉', '雞蛋'], specialTags: [], usageMethod: '適量給予', storageMethod: '冷藏保存' },
-  { id: '3', name: '鴨氣管', brand: '【個人】黃如盈', type: '零食', petType: ['dog'], ageGroup: ['全齡'], origin: '台灣', caloriesPer100g: 200.0, proteinPer100g: 15.0, fatPer100g: 8.0, carbsPer100g: 0.5, phosphorusPer100g: 0.12, allergens: [], mainIngredients: ['鴨肉'], specialTags: [], usageMethod: '作為零食適量給予', storageMethod: '陰涼乾燥處' },
-  { id: '4', name: '頂級無穀貓糧', brand: '皇家寵物食品', type: '乾飼糧', petType: ['cat'], ageGroup: ['成年'], origin: '法國', caloriesPer100g: 380.0, proteinPer100g: 40.0, fatPer100g: 18.0, carbsPer100g: 25.0, phosphorusPer100g: 1.2, allergens: [], mainIngredients: ['雞肉', '火雞肉'], specialTags: ['無穀', '高蛋白'], usageMethod: '每日適量', storageMethod: '陰涼乾燥處' },
-  { id: '5', name: '天然狗罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['dog'], ageGroup: ['成年', '老年'], origin: '美國', caloriesPer100g: 120.0, proteinPer100g: 10.0, fatPer100g: 7.0, carbsPer100g: 5.0, phosphorusPer100g: 0.8, allergens: ['玉米', '大豆'], mainIngredients: ['牛肉', '胡蘿蔔'], specialTags: ['減肥'], usageMethod: '直接餵食或搭配乾糧', storageMethod: '開封後冷藏' },
-  { id: '6', name: '貓咪化毛膏', brand: '喵喵星球', type: '補助食品', petType: ['cat'], ageGroup: ['全齡'], origin: '台灣', caloriesPer100g: 250.0, proteinPer100g: 5.0, fatPer100g: 15.0, carbsPer100g: 20.0, phosphorusPer100g: 0.05, allergens: ['魚'], mainIngredients: ['魚油', '麥芽糊精'], specialTags: ['化毛'], usageMethod: '每日擠出約5cm供貓舔食', storageMethod: '陰涼乾燥處，避免陽光直射' },
-  { id: '7', name: '狗狗潔牙骨', brand: 'Greenies', type: '潔牙骨', petType: ['dog'], ageGroup: ['成年'], origin: '美國', caloriesPer100g: 290.0, proteinPer100g: 28.0, fatPer100g: 8.0, carbsPer100g: 35.0, phosphorusPer100g: 0.5, allergens: ['小麥'], mainIngredients: ['玉米澱粉', '小麥蛋白'], specialTags: ['潔牙'], usageMethod: '每日一根，幫助清潔牙齒', storageMethod: '室溫保存' },
-  { id: '8', name: '鮮食生鮮包', brand: '鮮食家', type: '生鮮、冷凍', petType: ['dog_cat'], ageGroup: ['全齡'], origin: '台灣', caloriesPer100g: 180.0, proteinPer100g: 15.0, fatPer100g: 12.0, carbsPer100g: 3.0, phosphorusPer100g: 0.3, allergens: [], mainIngredients: ['雞胸肉', '南瓜', '胡蘿蔔'], specialTags: ['天然', '無穀'], usageMethod: '退冰後直接食用或搭配乾糧', storageMethod: '冷凍保存，開封後冷藏' },
-  { id: '9', name: '幼犬專用飼料', brand: '皇家寵物食品', type: '乾飼糧', petType: ['dog'], ageGroup: ['幼年'], origin: '法國', caloriesPer100g: 350.0, proteinPer100g: 30.0, fatPer100g: 20.0, carbsPer100g: 30.0, phosphorusPer100g: 1.0, allergens: ['玉米', '大豆', '小麥'], mainIngredients: ['雞肉粉', '米', '玉米'], specialTags: ['幼犬專用', '高鈣'], usageMethod: '依照包裝建議量餵食', storageMethod: '陰涼乾燥處' },
-  { id: '10', name: '老貓腎臟配方', brand: '希爾思寵物食品', type: '罐頭', petType: ['cat'], ageGroup: ['老年'], origin: '美國', caloriesPer100g: 100.0, proteinPer100g: 8.0, fatPer100g: 4.0, carbsPer100g: 8.0, phosphorusPer100g: 0.3, allergens: [], mainIngredients: ['豬肉', '雞肝'], specialTags: ['低磷', '腎臟配方', '老貓專用'], usageMethod: '每日2-3餐', storageMethod: '開封後冷藏' },
-  { id: '11', name: '低敏無穀狗糧', brand: '荒野饗宴', type: '乾飼糧', petType: ['dog'], ageGroup: ['全齡'], origin: '美國', caloriesPer100g: 360.0, proteinPer100g: 38.0, fatPer100g: 16.0, carbsPer100g: 28.0, phosphorusPer100g: 1.1, allergens: [], mainIngredients: ['野豬肉', '鹿肉', '地瓜'], specialTags: ['低敏', '無穀', '單一蛋白'], usageMethod: '每日適量', storageMethod: '陰涼乾燥處' },
-  { id: '12', name: '減重配方貓粮', brand: '皇家寵物食品', type: '乾飼糧', petType: ['cat'], ageGroup: ['成年'], origin: '法國', caloriesPer100g: 300.0, proteinPer100g: 35.0, fatPer100g: 10.0, carbsPer100g: 30.0, phosphorusPer100g: 0.9, allergens: ['玉米'], mainIngredients: ['雞胸肉', '纖維素'], specialTags: ['減肥', '低脂', '高纖'], usageMethod: '控制每日攝取量', storageMethod: '陰涼乾燥處' }
+  { 
+    id: '1', 
+    name: '雞肉乾', 
+    brand: '【個人】楊甯喬', 
+    type: '零食', 
+    petType: ['dog_cat'], 
+    ageGroup: ['全齡'], 
+    origin: '台灣', 
+    caloriesPer100g: 164.5, 
+    proteinPer100g: 12.8, 
+    fatPer100g: 3.0, 
+    carbsPer100g: 0.8, 
+    fiberPer100g: 0.3,
+    moisturePer100g: 18.5,
+    ashPer100g: 2.1,
+    sodiumPer100g: 215,
+    calciumPer100g: 8,
+    phosphorusPer100g: 98,
+    potassiumPer100g: 180,
+    magnesiumPer100g: 12,
+    ironPer100g: 0.8,
+    zincPer100g: 0.5,
+    vitaminAPer100g: 0,
+    vitaminDPer100g: 0,
+    vitaminEPer100g: 0.1,
+    omega3Per100g: 0.02,
+    omega6Per100g: 0.5,
+    taurinePer100g: 0,
+    allergens: ['蛋'], 
+    ingredients: '100%雞胸肉、蛋黃、花椰菜、紅蘿蔔、維生素E保存劑',
+    mainIngredients: ['雞肉'], 
+    specialTags: [], 
+    usageMethod: '請將零食撥開或剪成小塊，以避免貓狗噎食。',
+    storageMethod: '本產品為低溫烘乾、無添加天然零食，建議收到後立即冷藏保存。'
+  },
+  { 
+    id: '2', 
+    name: '頂級無穀貓糧', 
+    brand: '皇家寵物食品', 
+    type: '乾飼糧', 
+    petType: ['cat'], 
+    ageGroup: ['成年'], 
+    origin: '法國', 
+    caloriesPer100g: 380.0, 
+    proteinPer100g: 40.0, 
+    fatPer100g: 18.0, 
+    carbsPer100g: 25.0, 
+    fiberPer100g: 3.5,
+    moisturePer100g: 8.0,
+    ashPer100g: 8.0,
+    sodiumPer100g: 8000,
+    calciumPer100g: 1200,
+    phosphorusPer100g: 1000,
+    potassiumPer100g: 6500,
+    magnesiumPer100g: 1000,
+    ironPer100g: 150,
+    zincPer100g: 120,
+    vitaminAPer100g: 15000,
+    vitaminDPer100g: 1500,
+    vitaminEPer100g: 600,
+    omega3Per100g: 2.5,
+    omega6Per100g: 8.0,
+    taurinePer100g: 1600,
+    allergens: [], 
+    ingredients: '脫水雞肉、火雞肉、豌豆、馬鈴薯澱粉、雞脂肪（以維生素E保鮮）、魚油、亞麻籽、礦物質、維生素、牛磺酸、果寡糖、甘露寡糖、迷迭香萃取物',
+    mainIngredients: ['雞肉', '火雞肉'], 
+    specialTags: ['無穀', '高蛋白'], 
+    usageMethod: '建議每日餵食量為體重的2-3%，分2-3餐給予。請隨時提供乾淨飲用水。',
+    storageMethod: '儲存於陰涼乾燥處，開封後請密封保存，並於一個月內食用完畢。'
+  },
+  { 
+    id: '3', 
+    name: '天然狗罐頭', 
+    brand: '希爾思寵物食品', 
+    type: '罐頭', 
+    petType: ['dog'], 
+    ageGroup: ['成年', '老年'], 
+    origin: '美國', 
+    caloriesPer100g: 120.0, 
+    proteinPer100g: 10.0, 
+    fatPer100g: 7.0, 
+    carbsPer100g: 5.0, 
+    fiberPer100g: 1.0,
+    moisturePer100g: 78.0,
+    ashPer100g: 2.5,
+    sodiumPer100g: 4500,
+    calciumPer100g: 200,
+    phosphorusPer100g: 180,
+    potassiumPer100g: 2500,
+    magnesiumPer100g: 150,
+    ironPer100g: 25,
+    zincPer100g: 20,
+    vitaminAPer100g: 50000,
+    vitaminDPer100g: 500,
+    vitaminEPer100g: 50,
+    omega3Per100g: 0.5,
+    omega6Per100g: 1.2,
+    taurinePer100g: 0,
+    allergens: ['玉米', '大豆'], 
+    ingredients: '牛肉湯、牛肉、雞肉、 胡蘿蔔、豌豆、玉米澱粉、玉米粉、大分離蛋白質、雞脂肪、磷酸二鈣、鹽、氯化鉀、礦物質',
+    mainIngredients: ['牛肉', '胡蘿蔔'], 
+    specialTags: ['減肥'], 
+    usageMethod: '直接餵食或搭配乾糧食用。每日建議餵食量請參考包裝。',
+    storageMethod: '開封後請冷藏保存，並於3天內食用完畢。'
+  },
+  { 
+    id: '4', 
+    name: '貓咪化毛膏', 
+    brand: '喵喵星球', 
+    type: '補助食品', 
+    petType: ['cat'], 
+    ageGroup: ['全齡'], 
+    origin: '台灣', 
+    caloriesPer100g: 250.0, 
+    proteinPer100g: 5.0, 
+    fatPer100g: 15.0, 
+    carbsPer100g: 20.0, 
+    fiberPer100g: 3.0,
+    moisturePer100g: 10.0,
+    ashPer100g: 1.5,
+    sodiumPer100g: 3000,
+    calciumPer100g: 50,
+    phosphorusPer100g: 40,
+    potassiumPer100g: 800,
+    magnesiumPer100g: 30,
+    ironPer100g: 2,
+    zincPer100g: 3,
+    vitaminAPer100g: 1000,
+    vitaminDPer100g: 50,
+    vitaminEPer100g: 30,
+    omega3Per100g: 2.0,
+    omega6Per100g: 0.5,
+    taurinePer100g: 500,
+    allergens: ['魚'], 
+    ingredients: '麥芽糊精、魚油（含Omega-3）、纖維素、乳化劑（向日葵卵磷脂）、維生素A、維生素D3、維生素E、牛磺酸、礦物質',
+    mainIngredients: ['魚油', '麥芽糊精'], 
+    specialTags: ['化毛'], 
+    usageMethod: '每日擠出約5cm供貓舔食。可直接餵食或加入食物中。',
+    storageMethod: '陰涼乾燥處保存，避免陽光直射。開封後請於30天內食用完畢。'
+  },
+  { 
+    id: '5', 
+    name: '低敏無穀狗糧', 
+    brand: '荒野饗宴', 
+    type: '乾飼糧', 
+    petType: ['dog'], 
+    ageGroup: ['全齡'], 
+    origin: '美國', 
+    caloriesPer100g: 360.0, 
+    proteinPer100g: 38.0, 
+    fatPer100g: 16.0, 
+    carbsPer100g: 28.0, 
+    fiberPer100g: 4.0,
+    moisturePer100g: 10.0,
+    ashPer100g: 7.5,
+    sodiumPer100g: 6000,
+    calciumPer100g: 1000,
+    phosphorusPer100g: 800,
+    potassiumPer100g: 5500,
+    magnesiumPer100g: 800,
+    ironPer100g: 100,
+    zincPer100g: 100,
+    vitaminAPer100g: 12000,
+    vitaminDPer100g: 1000,
+    vitaminEPer100g: 400,
+    omega3Per100g: 3.0,
+    omega6Per100g: 7.0,
+    taurinePer100g: 0,
+    allergens: [], 
+    ingredients: '野豬肉、鹿肉、地瓜、綠豌豆、鷹嘴豆、雞脂肪（以混合生育酚保鮮）、乾蛋產品、羔羊肉、鯡魚油、氯化鈉、氯化鉀、鋅蛋白複合物、鐵蛋白複合物、銅蛋白複合物、錳蛋白複合物、亞硒酸鈉、維生素E、維生素A、膽鹼、維生素D3、維生素B12、核黃素、硝酸硫胺素、維生素H、葉酸、錳蛋白複合物、氧化錳、菸鹼酸、泛酸鈣、鹽酸吡哆醇、β-胡蘿蔔素、迷迭香萃取物',
+    mainIngredients: ['野豬肉', '鹿肉', '地瓜'], 
+    specialTags: ['低敏', '無穀', '單一蛋白'], 
+    usageMethod: '依照包裝建議每日餵食量，根據狗狗年齡、體重及活動量調整。',
+    storageMethod: '儲存於陰涼乾燥處，避免陽光直射。'
+  },
+  { 
+    id: '6', 
+    name: '老貓腎臟配方罐頭', 
+    brand: '希爾思寵物食品', 
+    type: '罐頭', 
+    petType: ['cat'], 
+    ageGroup: ['老年'], 
+    origin: '美國', 
+    caloriesPer100g: 100.0, 
+    proteinPer100g: 8.0, 
+    fatPer100g: 4.0, 
+    carbsPer100g: 8.0, 
+    fiberPer100g: 0.5,
+    moisturePer100g: 80.0,
+    ashPer100g: 1.8,
+    sodiumPer100g: 2500,
+    calciumPer100g: 180,
+    phosphorusPer100g: 150,
+    potassiumPer100g: 3500,
+    magnesiumPer100g: 80,
+    ironPer100g: 25,
+    zincPer100g: 20,
+    vitaminAPer100g: 80000,
+    vitaminDPer100g: 800,
+    vitaminEPer100g: 120,
+    omega3Per100g: 0.8,
+    omega6Per100g: 1.5,
+    taurinePer100g: 800,
+    allergens: [], 
+    ingredients: '豬肉湯、豬肉、雞肝、雞肉、糙米、雞脂肪、蛋白的、碳酸鈣、氯化鉀、牛磺酸、氧化鎂、維生素E、硫酸亞鐵、氧化鋅、硫酸錳、硫酸銅、碘酸鉀、維生素A、膽鹼鹽、維生素D3、核黃素、維生素B12、菸鹼酸、維生素K3、鹽酸硫胺素、鹽酸吡哆醇、泛酸鈣、葉酸、生物素',
+    mainIngredients: ['豬肉', '雞肝', '雞肉'], 
+    specialTags: ['低磷', '腎臟配方', '老貓專用'], 
+    usageMethod: '每日餵食2-3餐，可直接食用或加入少量溫水調勻。',
+    storageMethod: '開封後請冷藏保存，並於2天內食用完畢。'
+  },
+  { 
+    id: '7', 
+    name: '幼犬專用飼料', 
+    brand: '皇家寵物食品', 
+    type: '乾飼糧', 
+    petType: ['dog'], 
+    ageGroup: ['幼年'], 
+    origin: '法國', 
+    caloriesPer100g: 350.0, 
+    proteinPer100g: 30.0, 
+    fatPer100g: 20.0, 
+    carbsPer100g: 30.0, 
+    fiberPer100g: 3.0,
+    moisturePer100g: 8.0,
+    ashPer100g: 7.0,
+    sodiumPer100g: 7000,
+    calciumPer100g: 1200,
+    phosphorusPer100g: 1000,
+    potassiumPer100g: 6000,
+    magnesiumPer100g: 900,
+    ironPer100g: 200,
+    zincPer100g: 150,
+    vitaminAPer100g: 20000,
+    vitaminDPer100g: 1500,
+    vitaminEPer100g: 500,
+    omega3Per100g: 1.5,
+    omega6Per100g: 5.0,
+    taurinePer100g: 0,
+    allergens: ['玉米', '大豆', '小麥'], 
+    ingredients: '脫水禽肉粉、雞肉粉、小麥、玉米、米、動物脂肪、甜菜粕、魚油、礦物質、蛋粉、維生素、益生元（MOS）、絲蘭萃取物、左旋肉鹼、抗氧化劑（混合生育酚和維生素C）',
+    mainIngredients: ['雞肉粉', '小麥', '玉米', '米'], 
+    specialTags: ['幼犬專用', '高鈣'], 
+    usageMethod: '依照包裝年齡建議餵食。幼犬每日需分3-4餐餵食。',
+    storageMethod: '陰涼乾燥處保存，開封後請密封。'
+  },
+  { 
+    id: '8', 
+    name: '鮮食生鮮包', 
+    brand: '鮮食家', 
+    type: '生鮮、冷凍', 
+    petType: ['dog_cat'], 
+    ageGroup: ['全齡'], 
+    origin: '台灣', 
+    caloriesPer100g: 180.0, 
+    proteinPer100g: 15.0, 
+    fatPer100g: 12.0, 
+    carbsPer100g: 3.0, 
+    fiberPer100g: 1.0,
+    moisturePer100g: 68.0,
+    ashPer100g: 1.5,
+    sodiumPer100g: 1500,
+    calciumPer100g: 100,
+    phosphorusPer100g: 90,
+    potassiumPer100g: 1200,
+    magnesiumPer100g: 80,
+    ironPer100g: 5,
+    zincPer100g: 4,
+    vitaminAPer100g: 5000,
+    vitaminDPer100g: 100,
+    vitaminEPer100g: 5,
+    omega3Per100g: 1.0,
+    omega6Per100g: 2.0,
+    taurinePer100g: 200,
+    allergens: [], 
+    ingredients: '雞胸肉、南瓜、 胡蘿蔔、雞肝、藍莓、奇異果、蛋殼粉、葵花籽油、迷迭香萃取物',
+    mainIngredients: ['雞胸肉', '南瓜', '胡蘿蔔'], 
+    specialTags: ['天然', '無穀'], 
+    usageMethod: '退冰後直接食用，或微波加熱後食用。可搭配乾糧或单独餵食。',
+    storageMethod: '冷凍保存-18°C以下，開封後冷藏並於24小時內食用完畢。'
+  },
+  { 
+    id: '9', 
+    name: '減重配方貓粮', 
+    brand: '皇家寵物食品', 
+    type: '乾飼糧', 
+    petType: ['cat'], 
+    ageGroup: ['成年'], 
+    origin: '法國', 
+    caloriesPer100g: 300.0, 
+    proteinPer100g: 35.0, 
+    fatPer100g: 10.0, 
+    carbsPer100g: 30.0, 
+    fiberPer100g: 6.0,
+    moisturePer100g: 8.0,
+    ashPer100g: 7.0,
+    sodiumPer100g: 6500,
+    calciumPer100g: 1000,
+    phosphorusPer100g: 900,
+    potassiumPer100g: 6000,
+    magnesiumPer100g: 700,
+    ironPer100g: 120,
+    zincPer100g: 100,
+    vitaminAPer100g: 15000,
+    vitaminDPer100g: 1200,
+    vitaminEPer100g: 450,
+    omega3Per100g: 1.5,
+    omega6Per100g: 4.0,
+    taurinePer100g: 1500,
+    allergens: ['玉米'], 
+    ingredients: '雞胸肉粉、纖維素、玉米麵粉、雞脂肪、甜菜粕、礦物質、蛋粉、酵母、魚油、維生素、牛磺酸、左旋肉鹼、DL-甲硫胺酸、L-肉鹼、迷迭香萃取物、抗氧化劑',
+    mainIngredients: ['雞胸肉', '纖維素', '玉米'], 
+    specialTags: ['減肥', '低脂', '高纖'], 
+    usageMethod: '控制每日攝取量，建議使用體重管理專用量匙。',
+    storageMethod: '儲存於陰涼乾燥處，開封後請密封。'
+  },
+  { 
+    id: '10', 
+    name: '狗狗潔牙骨', 
+    brand: 'Greenies', 
+    type: '潔牙骨', 
+    petType: ['dog'], 
+    ageGroup: ['成年'], 
+    origin: '美國', 
+    caloriesPer100g: 290.0, 
+    proteinPer100g: 28.0, 
+    fatPer100g: 8.0, 
+    carbsPer100g: 35.0, 
+    fiberPer100g: 5.0,
+    moisturePer100g: 12.0,
+    ashPer100g: 4.0,
+    sodiumPer100g: 4000,
+    calciumPer100g: 500,
+    phosphorusPer100g: 400,
+    potassiumPer100g: 2000,
+    magnesiumPer100g: 300,
+    ironPer100g: 50,
+    zincPer100g: 40,
+    vitaminAPer100g: 0,
+    vitaminDPer100g: 500,
+    vitaminEPer100g: 100,
+    omega3Per100g: 0.1,
+    omega6Per100g: 0.5,
+    taurinePer100g: 0,
+    allergens: ['小麥'], 
+    ingredients: '玉米澱粉、小麥蛋白質、甘油、雞肉粉、礦物質（磷酸二鈣、氯化鈉、氯化鉀、硫酸鋅、硫酸亞鐵、硫酸銅、硫酸錳、碘化鉀）、卵磷脂、天然香料、膽鹼氯化物、維生素（維生素E、維生素B1、維生素B12、維生素D3）',
+    mainIngredients: ['玉米澱粉', '小麥蛋白'], 
+    specialTags: ['潔牙'], 
+    usageMethod: '每日一根，幫助清潔牙齒至牙齦線。請在獸醫師指導下使用。',
+    storageMethod: '室溫保存，避免陽光直射。'
+  },
+  { 
+    id: '11', 
+    name: '羊奶荷包蛋', 
+    brand: '【個人】楊甯喬', 
+    type: '零食', 
+    petType: ['dog_cat'], 
+    ageGroup: ['全齡'], 
+    origin: '台灣', 
+    caloriesPer100g: 46.2, 
+    proteinPer100g: 8.5, 
+    fatPer100g: 9.6, 
+    carbsPer100g: 1.2, 
+    fiberPer100g: 0.3,
+    moisturePer100g: 75.0,
+    ashPer100g: 1.5,
+    sodiumPer100g: 50,
+    calciumPer100g: 80,
+    phosphorusPer100g: 60,
+    potassiumPer100g: 100,
+    magnesiumPer100g: 15,
+    ironPer100g: 0.5,
+    zincPer100g: 0.3,
+    vitaminAPer100g: 50,
+    vitaminDPer100g: 5,
+    vitaminEPer100g: 0.2,
+    omega3Per100g: 0.1,
+    omega6Per100g: 0.3,
+    taurinePer100g: 20,
+    allergens: ['蛋'], 
+    ingredients: '倍力羊奶粉、雞蛋',
+    mainIngredients: ['羊肉', '雞蛋'], 
+    specialTags: [], 
+    usageMethod: '適量給予，作為獎勵或點心。',
+    storageMethod: '冷藏保存，開封後請盡快食用。'
+  },
+  { 
+    id: '12', 
+    name: '鴨氣管', 
+    brand: '【個人】黃如盈', 
+    type: '零食', 
+    petType: ['dog'], 
+    ageGroup: ['全齡'], 
+    origin: '台灣', 
+    caloriesPer100g: 200.0, 
+    proteinPer100g: 15.0, 
+    fatPer100g: 8.0, 
+    carbsPer100g: 0.5, 
+    fiberPer100g: 0.2,
+    moisturePer100g: 10.0,
+    ashPer100g: 1.0,
+    sodiumPer100g: 100,
+    calciumPer100g: 50,
+    phosphorusPer100g: 40,
+    potassiumPer100g: 80,
+    magnesiumPer100g: 10,
+    ironPer100g: 1,
+    zincPer100g: 0.8,
+    vitaminAPer100g: 0,
+    vitaminDPer100g: 0,
+    vitaminEPer100g: 0.1,
+    omega3Per100g: 0.05,
+    omega6Per100g: 0.2,
+    taurinePer100g: 0,
+    allergens: [], 
+    ingredients: '100%新鮮鴨氣管',
+    mainIngredients: ['鴨肉'], 
+    specialTags: [], 
+    usageMethod: '作為零食適量給予。',
+    storageMethod: '陰涼乾燥處保存，避免陽光直射。'
+  }
 ]
 
+const CATEGORIES = ['全部', '零食', '罐頭', '乾飼糧', '補助食品', '生鮮、冷凍', '潔牙骨']
 const ALLERGENS = ['雞肉', '蛋', '玉米', '大豆', '小麥', '牛肉', '羊肉', '魚', '火雞肉']
 
 const PET_TYPES = [
-  { value: 'dog', label: '🐕 狗', icon: 'dog' },
-  { value: 'cat', label: '🐱 貓', icon: 'cat' },
-  { value: 'dog_cat', label: '🐾 狗貓', icon: 'both' }
+  { value: 'dog', label: '🐕 狗' },
+  { value: 'cat', label: '🐱 貓' },
+  { value: 'dog_cat', label: '🐾 狗貓' }
 ]
 
 const AGE_GROUPS = ['全部', '幼年', '成年', '老年', '全齡']
@@ -60,6 +469,7 @@ export default function PetFoodDB() {
   const [search, setSearch] = useState('')
   const [selectedPetType, setSelectedPetType] = useState('')
   const [selectedAge, setSelectedAge] = useState('全部')
+  const [selectedCategory, setSelectedCategory] = useState('全部')
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [sortBy, setSortBy] = useState('calories-asc')
@@ -84,7 +494,8 @@ export default function PetFoodDB() {
       filtered = filtered.filter(p =>
         p.name.toLowerCase().includes(s) ||
         p.brand.toLowerCase().includes(s) ||
-        p.mainIngredients.some(i => i.toLowerCase().includes(s))
+        p.mainIngredients.some(i => i.toLowerCase().includes(s)) ||
+        p.ingredients.toLowerCase().includes(s)
       )
     }
 
@@ -96,6 +507,11 @@ export default function PetFoodDB() {
     // 年齡
     if (selectedAge && selectedAge !== '全部') {
       filtered = filtered.filter(p => p.ageGroup.includes(selectedAge))
+    }
+
+    // 食品分類
+    if (selectedCategory && selectedCategory !== '全部') {
+      filtered = filtered.filter(p => p.type === selectedCategory)
     }
 
     // 過敏原排除
@@ -135,7 +551,7 @@ export default function PetFoodDB() {
     })
 
     setProducts(filtered)
-  }, [search, selectedPetType, selectedAge, selectedAllergens, selectedTags, sortBy, calorieRange, proteinRange, fatRange, phosphorusRange])
+  }, [search, selectedPetType, selectedAge, selectedCategory, selectedAllergens, selectedTags, sortBy, calorieRange, proteinRange, fatRange, phosphorusRange])
 
   const toggleAllergen = (allergen: string) => {
     setSelectedAllergens(prev =>
@@ -153,6 +569,7 @@ export default function PetFoodDB() {
     setSearch('')
     setSelectedPetType('')
     setSelectedAge('全部')
+    setSelectedCategory('全部')
     setSelectedAllergens([])
     setSelectedTags([])
     setSortBy('calories-asc')
@@ -165,6 +582,7 @@ export default function PetFoodDB() {
   const activeFilterCount = [
     selectedPetType,
     selectedAge !== '全部',
+    selectedCategory !== '全部',
     selectedAllergens.length > 0,
     selectedTags.length > 0,
     calorieRange[0] > 0 || calorieRange[1] < 500,
@@ -230,6 +648,22 @@ export default function PetFoodDB() {
             </div>
           </div>
 
+          {/* 食品分類 - 新增 */}
+          <div style={styles.filterSection}>
+            <div style={styles.filterLabel}>食品分類</div>
+            <div style={styles.categoryRow}>
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  style={{...styles.categoryBtn, ...(selectedCategory === cat ? styles.categoryBtnActive : {})}}
+                  onClick={() => setSelectedCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* 過敏原 */}
           <div style={styles.filterSection}>
             <div style={styles.filterLabel}>過敏原排除（點選排除）</div>
@@ -262,7 +696,7 @@ export default function PetFoodDB() {
             </div>
           </div>
 
-          {/* 營養範圍 - 可展開 */}
+          {/* 營養範圍 */}
           <div style={styles.filterSection}>
             <button 
               style={styles.sectionToggle}
@@ -274,35 +708,10 @@ export default function PetFoodDB() {
             
             {expandedSection === 'nutrition' && (
               <div style={styles.nutritionRanges}>
-                <RangeSlider 
-                  label="熱量 (kcal/100g)" 
-                  min={0} max={500} 
-                  value={calorieRange} 
-                  onChange={setCalorieRange}
-                  unit="kcal"
-                />
-                <RangeSlider 
-                  label="蛋白質 (g/100g)" 
-                  min={0} max={50} 
-                  value={proteinRange} 
-                  onChange={setProteinRange}
-                  unit="g"
-                />
-                <RangeSlider 
-                  label="脂肪 (g/100g)" 
-                  min={0} max={30} 
-                  value={fatRange} 
-                  onChange={setFatRange}
-                  unit="g"
-                />
-                <RangeSlider 
-                  label="磷 (g/100g)" 
-                  min={0} max={2} 
-                  value={phosphorusRange} 
-                  onChange={setPhosphorusRange}
-                  unit="g"
-                  step={0.1}
-                />
+                <RangeSlider label="熱量 (kcal/100g)" min={0} max={500} value={calorieRange} onChange={setCalorieRange} unit="kcal" />
+                <RangeSlider label="蛋白質 (g/100g)" min={0} max={50} value={proteinRange} onChange={setProteinRange} unit="g" />
+                <RangeSlider label="脂肪 (g/100g)" min={0} max={30} value={fatRange} onChange={setFatRange} unit="g" />
+                <RangeSlider label="磷 (g/100g)" min={0} max={2} value={phosphorusRange} onChange={setPhosphorusRange} unit="g" step={0.1} />
               </div>
             )}
           </div>
@@ -310,11 +719,7 @@ export default function PetFoodDB() {
           {/* 排序 */}
           <div style={styles.filterSection}>
             <div style={styles.filterLabel}>排序方式</div>
-            <select 
-              value={sortBy} 
-              onChange={(e) => setSortBy(e.target.value)}
-              style={styles.sortSelect}
-            >
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={styles.sortSelect}>
               {SORT_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
@@ -340,6 +745,12 @@ export default function PetFoodDB() {
             <span style={styles.activeChip}>
               {selectedAge}
               <button onClick={() => setSelectedAge('全部')}>✕</button>
+            </span>
+          )}
+          {selectedCategory !== '全部' && (
+            <span style={styles.activeChip}>
+              {selectedCategory}
+              <button onClick={() => setSelectedCategory('全部')}>✕</button>
             </span>
           )}
           {selectedAllergens.map(a => (
@@ -403,7 +814,7 @@ export default function PetFoodDB() {
 
             {product.allergens.length > 0 && (
               <div style={styles.allergenRow}>
-                <span style={styles.allergenLabel}>⚠️ 含有：</span>
+                <span style={styles.allergenLabel}>⚠️ </span>
                 {product.allergens.map(a => <span key={a} style={styles.allergenTag}>{a}</span>)}
               </div>
             )}
@@ -439,27 +850,54 @@ export default function PetFoodDB() {
                   </span>
                 ))}
                 <span style={styles.modalBadge}>{selectedProduct.type}</span>
+                {selectedProduct.ageGroup.map(a => (
+                  <span key={a} style={styles.modalBadge}>{a}</span>
+                ))}
               </div>
               <h2 style={styles.modalTitle}>{selectedProduct.name}</h2>
               <p style={styles.modalBrand}>{selectedProduct.brand} · {selectedProduct.origin}</p>
             </div>
 
+            {/* 全營養標示 */}
             <div style={styles.modalSection}>
-              <h3 style={styles.sectionTitle}>營養成分（每100g）</h3>
-              <div style={styles.nutritionGrid}>
+              <h3 style={styles.sectionTitle}>🥗 完整營養標示（每100g）</h3>
+              <div style={styles.nutritionGridLarge}>
                 <NutritionCard label="熱量" value={selectedProduct.caloriesPer100g} unit="kcal" />
                 <NutritionCard label="蛋白質" value={selectedProduct.proteinPer100g} unit="g" />
                 <NutritionCard label="脂肪" value={selectedProduct.fatPer100g} unit="g" />
-                <NutritionCard label="碳水" value={selectedProduct.carbsPer100g} unit="g" />
-                <NutritionCard label="磷" value={selectedProduct.phosphorusPer100g} unit="g" />
+                <NutritionCard label="碳水化合物" value={selectedProduct.carbsPer100g} unit="g" />
+                <NutritionCard label="纖維" value={selectedProduct.fiberPer100g} unit="g" />
+                <NutritionCard label="水分" value={selectedProduct.moisturePer100g} unit="g" />
+                <NutritionCard label="灰分" value={selectedProduct.ashPer100g} unit="g" />
+                <NutritionCard label="鈉" value={selectedProduct.sodiumPer100g} unit="mg" />
+                <NutritionCard label="鈣" value={selectedProduct.calciumPer100g} unit="mg" />
+                <NutritionCard label="磷" value={selectedProduct.phosphorusPer100g} unit="mg" />
+                <NutritionCard label="鉀" value={selectedProduct.potassiumPer100g} unit="mg" />
+                <NutritionCard label="鎂" value={selectedProduct.magnesiumPer100g} unit="mg" />
+                <NutritionCard label="鐵" value={selectedProduct.ironPer100g} unit="mg" />
+                <NutritionCard label="鋅" value={selectedProduct.zincPer100g} unit="mg" />
+                <NutritionCard label="維生素A" value={selectedProduct.vitaminAPer100g} unit="IU" />
+                <NutritionCard label="維生素D" value={selectedProduct.vitaminDPer100g} unit="IU" />
+                <NutritionCard label="維生素E" value={selectedProduct.vitaminEPer100g} unit="IU" />
+                <NutritionCard label="Omega-3" value={selectedProduct.omega3Per100g} unit="g" />
+                <NutritionCard label="Omega-6" value={selectedProduct.omega6Per100g} unit="g" />
+                <NutritionCard label="牛磺酸" value={selectedProduct.taurinePer100g} unit="mg" />
               </div>
             </div>
 
+            {/* 全成分 */}
             <div style={styles.modalSection}>
-              <h3 style={styles.sectionTitle}>主要成分</h3>
+              <h3 style={styles.sectionTitle}>🥩 完整成分</h3>
+              <p style={styles.ingredientsText}>{selectedProduct.ingredients}</p>
+            </div>
+
+            {/* 主要成分 */}
+            <div style={styles.modalSection}>
+              <h3 style={styles.sectionTitle}>🏆 主要成分</h3>
               <p>{selectedProduct.mainIngredients.join('、')}</p>
             </div>
 
+            {/* 過敏原 */}
             {selectedProduct.allergens.length > 0 && (
               <div style={styles.modalSection}>
                 <h3 style={styles.sectionTitle}>⚠️ 過敏原</h3>
@@ -471,9 +909,10 @@ export default function PetFoodDB() {
               </div>
             )}
 
+            {/* 特殊標籤 */}
             {selectedProduct.specialTags.length > 0 && (
               <div style={styles.modalSection}>
-                <h3 style={styles.sectionTitle}>特殊標籤</h3>
+                <h3 style={styles.sectionTitle}>🏷️ 特殊標籤</h3>
                 <div style={styles.tagRow}>
                   {selectedProduct.specialTags.map(t => (
                     <span key={t} style={styles.specialTagLarge}>{t}</span>
@@ -482,13 +921,15 @@ export default function PetFoodDB() {
               </div>
             )}
 
+            {/* 使用方法 */}
             <div style={styles.modalSection}>
-              <h3 style={styles.sectionTitle}>使用方法</h3>
+              <h3 style={styles.sectionTitle}>📖 使用方法</h3>
               <p>{selectedProduct.usageMethod}</p>
             </div>
 
+            {/* 保存方式 */}
             <div style={styles.modalSection}>
-              <h3 style={styles.sectionTitle}>保存方式</h3>
+              <h3 style={styles.sectionTitle}>🏪 保存方式</h3>
               <p>{selectedProduct.storageMethod}</p>
             </div>
           </div>
@@ -514,24 +955,8 @@ function RangeSlider({ label, min, max, value, onChange, unit, step = 1 }: {
         <span style={rangeStyles.value}>{value[0]} - {value[1]} {unit}</span>
       </div>
       <div style={rangeStyles.sliderRow}>
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value[0]}
-          onChange={(e) => onChange([Number(e.target.value), value[1]])}
-          style={rangeStyles.slider}
-        />
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value[1]}
-          onChange={(e) => onChange([value[0], Number(e.target.value)])}
-          style={rangeStyles.slider}
-        />
+        <input type="range" min={min} max={max} step={step} value={value[0]} onChange={(e) => onChange([Number(e.target.value), value[1]])} style={rangeStyles.slider} />
+        <input type="range" min={min} max={max} step={step} value={value[1]} onChange={(e) => onChange([value[0], Number(e.target.value)])} style={rangeStyles.slider} />
       </div>
     </div>
   )
@@ -540,7 +965,7 @@ function RangeSlider({ label, min, max, value, onChange, unit, step = 1 }: {
 function NutritionCard({ label, value, unit }: { label: string; value: number; unit: string }) {
   return (
     <div style={nutritionStyles.card}>
-      <span style={nutritionStyles.value}>{value}</span>
+      <span style={nutritionStyles.value}>{value || '-'}</span>
       <span style={nutritionStyles.unit}>{unit}</span>
       <span style={nutritionStyles.label}>{label}</span>
     </div>
@@ -568,6 +993,10 @@ const styles: Record<string, React.CSSProperties> = {
   ageRow: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
   ageBtn: { padding: '8px 12px', background: '#F5F5F5', border: 'none', borderRadius: '20px', fontSize: '13px', cursor: 'pointer' },
   ageBtnActive: { background: '#FF6B35', color: 'white' },
+  
+  categoryRow: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
+  categoryBtn: { padding: '8px 14px', background: '#F5F5F5', border: 'none', borderRadius: '20px', fontSize: '13px', cursor: 'pointer' },
+  categoryBtnActive: { background: '#E3F2FD', color: '#1976D2', fontWeight: '500' },
   
   allergenGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   allergenBtn: { padding: '8px 14px', background: '#F5F5F5', border: '2px solid transparent', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' },
@@ -614,17 +1043,18 @@ const styles: Record<string, React.CSSProperties> = {
   emptyIcon: { fontSize: '48px', marginBottom: '16px' },
   
   modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
-  modal: { background: 'white', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' },
+  modal: { background: 'white', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '500px', maxHeight: '92vh', overflowY: 'auto' },
   modalHandle: { width: '40px', height: '4px', background: '#E0E0E0', borderRadius: '2px', margin: '12px auto' },
   closeBtn: { position: 'absolute', top: '12px', right: '12px', width: '32px', height: '32px', background: '#F5F5F5', border: 'none', borderRadius: '50%', fontSize: '16px', cursor: 'pointer' },
   modalHeader: { padding: '0 20px 16px', borderBottom: '1px solid #E0E0E0' },
-  modalBadges: { display: 'flex', gap: '6px', marginBottom: '10px' },
+  modalBadges: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' },
   modalBadge: { padding: '4px 10px', background: '#F5F5F5', borderRadius: '6px', fontSize: '12px' },
   modalTitle: { fontSize: '20px', fontWeight: '600', marginBottom: '4px' },
   modalBrand: { fontSize: '13px', color: '#666' },
   modalSection: { padding: '16px 20px', borderBottom: '1px solid #E0E0E0' },
   sectionTitle: { fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '10px' },
-  nutritionGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' },
+  ingredientsText: { fontSize: '14px', lineHeight: '1.6', color: '#333' },
+  
   allergenList: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   allergenTagLarge: { padding: '6px 14px', background: '#FFEBEE', color: '#F44336', borderRadius: '20px', fontSize: '14px' },
   specialTagLarge: { padding: '6px 14px', background: '#E8F5E9', color: '#388E3C', borderRadius: '20px', fontSize: '14px' }
@@ -640,8 +1070,8 @@ const rangeStyles: Record<string, React.CSSProperties> = {
 }
 
 const nutritionStyles: Record<string, React.CSSProperties> = {
-  card: { background: '#FAFAFA', borderRadius: '10px', padding: '12px', textAlign: 'center' },
-  value: { fontSize: '18px', fontWeight: '700', color: '#FF6B35', display: 'block' },
-  unit: { fontSize: '11px', color: '#999' },
-  label: { fontSize: '11px', color: '#666', display: 'block', marginTop: '2px' }
+  card: { background: '#FAFAFA', borderRadius: '10px', padding: '10px 6px', textAlign: 'center' },
+  value: { fontSize: '16px', fontWeight: '700', color: '#FF6B35', display: 'block' },
+  unit: { fontSize: '10px', color: '#999' },
+  label: { fontSize: '10px', color: '#666', display: 'block', marginTop: '2px' }
 }
