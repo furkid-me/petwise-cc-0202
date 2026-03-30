@@ -262,10 +262,11 @@ export default function HomePage() {
       <div className="mx-4 border-t border-gray-950/[0.08]" />
 
       {/* 品牌總覽卡片 */}
-      <div className="mx-4 mt-3">
+      <div className="mx-4 mt-3 bg-white rounded-2xl ring-1 ring-gray-950/10 overflow-hidden">
+        {/* 標題列 */}
         <button
           onClick={() => router.push('/pet-food-db')}
-          className="w-full bg-white rounded-2xl ring-1 ring-gray-950/10 p-4 text-left hover:bg-gray-50 transition-colors"
+          className="w-full p-4 text-left hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -274,21 +275,86 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="font-semibold text-gray-800">品牌總覽</p>
-                <p className="text-xs text-gray-400 mt-0.5">瀏覽所有寵物食品品牌</p>
+                <p className="text-xs text-gray-400 mt-0.5">共 3,559 個品牌</p>
               </div>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </div>
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            <span className="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-lg">零食</span>
-            <span className="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-lg">罐頭</span>
-            <span className="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-lg">乾飼糧</span>
-            <span className="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-lg">補助食品</span>
-            <span className="text-xs text-gray-400 self-center ml-1">等...</span>
-          </div>
         </button>
+        
+        {/* 品牌列表 */}
+        <div className="px-4 pb-4">
+          <p className="text-xs text-gray-400 mb-2">熱門品牌</p>
+          <div className="space-y-2">
+            {/* 品牌項目 */}
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-lg text-xs flex items-center justify-center font-medium">皇</span>
+                <span className="text-sm text-gray-700">皇家寵物食品</span>
+              </div>
+              <span className="text-xs text-gray-400">🇫🇷 法國</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg text-xs flex items-center justify-center font-medium">希</span>
+                <span className="text-sm text-gray-700">希爾思寵物食品</span>
+              </div>
+              <span className="text-xs text-gray-400">🇺🇸 美國</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 bg-green-100 text-green-600 rounded-lg text-xs flex items-center justify-center font-medium">野</span>
+                <span className="text-sm text-gray-700">荒野饗宴</span>
+              </div>
+              <span className="text-xs text-gray-400">🇺🇸 美國</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-lg text-xs flex items-center justify-center font-medium">冠</span>
+                <span className="text-sm text-gray-700">冠能寵物食品</span>
+              </div>
+              <span className="text-xs text-gray-400">🇺🇸 美國</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 bg-red-100 text-red-600 rounded-lg text-xs flex items-center justify-center font-medium">本</span>
+                <span className="text-sm text-gray-700">本能</span>
+              </div>
+              <span className="text-xs text-gray-400">🇨🇦 加拿大</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 bg-yellow-100 text-yellow-600 rounded-lg text-xs flex items-center justify-center font-medium">美</span>
+                <span className="text-sm text-gray-700">美士</span>
+              </div>
+              <span className="text-xs text-gray-400">🇺🇸 美國</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 bg-teal-100 text-teal-600 rounded-lg text-xs flex items-center justify-center font-medium">愛</span>
+                <span className="text-sm text-gray-700">愛肯拿</span>
+              </div>
+              <span className="text-xs text-gray-400">🇨🇦 加拿大</span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-lg text-xs flex items-center justify-center font-medium">渴</span>
+                <span className="text-sm text-gray-700">渴望</span>
+              </div>
+              <span className="text-xs text-gray-400">🇨🇦 加拿大</span>
+            </div>
+          </div>
+          
+          {/* 查看更多 */}
+          <button
+            onClick={() => router.push('/pet-food-db')}
+            className="w-full mt-3 py-2 text-sm text-orange-500 font-medium hover:bg-orange-50 rounded-lg transition-colors"
+          >
+            查看全部品牌 →
+          </button>
+        </div>
       </div>
 
       {/* 今日飲食記錄 */}
