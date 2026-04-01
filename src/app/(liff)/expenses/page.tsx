@@ -17,6 +17,7 @@ interface ExpenseRecord {
 const CategoryLabels: Record<string, { label: string; emoji: string }> = {
   FOOD: { label: '飼料/零食', emoji: '🍖' },
   MEDICAL: { label: '醫療', emoji: '🏥' },
+  MEDICATION: { label: '藥品', emoji: '💊' },
   GROOMING: { label: '美容', emoji: '✂️' },
   SUPPLIES: { label: '用品', emoji: '📦' },
   INSURANCE: { label: '保險', emoji: '🛡️' },
@@ -33,26 +34,27 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchRecords = useCallback(async () => {
     if (!user || !activePet) { setLoading(false); return; }
     setLoading(true);
     const token = localStorage.getItem('petwise_jwt');
-    
+
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-    
+
     try {
       const url = new URL('/api/expense-records', window.location.origin);
       url.searchParams.append('petId', activePet.id);
       url.searchParams.append('startDate', firstDayOfMonth);
       url.searchParams.append('endDate', lastDayOfMonth);
-      
+
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         const expenses = Array.isArray(data) ? data : [];
@@ -62,7 +64,7 @@ export default function ExpensesPage() {
       } else {
         setError('載入失敗');
       }
-    } catch (err) {
+    } catch {
       setError('載入失敗');
     } finally {
       setLoading(false);
@@ -73,13 +75,44 @@ export default function ExpensesPage() {
     fetchRecords();
   }, [fetchRecords]);
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('確定要刪除這筆記錄？')) return;
+    setDeletingId(id);
+    const token = localStorage.getItem('petwise_jwt');
+    try {
+      const res = await fetch(`/api/expense-records/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const deleted = records.find(r => r.id === id);
+        setRecords(prev => prev.filter(r => r.id !== id));
+        setTotalAmount(prev => prev - (deleted ? Number(deleted.amount) : 0));
+      } else {
+        alert('刪除失敗，請稍後再試');
+      }
+    } catch {
+      alert('網路錯誤，請稍後再試');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const currentMonth = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' });
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 頂部區塊 */}
       <div className="bg-indigo-600 text-white p-4 pb-16">
-        <button onClick={() => router.push('/')} className="text-white mb-2">← 返回</button>
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => router.push('/')} className="text-white">← 返回</button>
+          <button
+            onClick={() => router.push('/expenses/stats')}
+            className="text-white text-sm opacity-80 hover:opacity-100"
+          >
+            統計 📊
+          </button>
+        </div>
         <h1 className="text-xl font-bold">💰 花費記錄</h1>
         {activePet && <p className="text-sm opacity-80 mt-1">{activePet.name}的花費</p>}
       </div>
@@ -102,19 +135,20 @@ export default function ExpensesPage() {
         ) : records.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-400">本月還沒有花費記錄</p>
-            <p className="text-sm text-gray-400 mt-2">在對話中說「花了XXX」即可記錄</p>
+            <p className="text-sm text-gray-400 mt-2">點下方「+」新增，或在對話中說「花了XXX」</p>
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
             {records.map((record) => {
               const catInfo = CategoryLabels[record.category] || CategoryLabels.OTHER;
+              const isDeleting = deletingId === record.id;
               return (
                 <li key={record.id} className="py-3">
                   <div className="flex justify-between items-start">
-                    <div className="flex items-start gap-3">
-                      <span className="text-xl">{catInfo.emoji}</span>
-                      <div>
-                        <p className="font-medium text-gray-800">{record.description}</p>
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <span className="text-xl flex-shrink-0">{catInfo.emoji}</span>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-800 truncate">{record.description}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {new Date(record.recordDate).toLocaleDateString('zh-TW')}
                           <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">
@@ -122,13 +156,23 @@ export default function ExpensesPage() {
                           </span>
                         </p>
                         {record.notes && (
-                          <p className="text-sm text-gray-400 mt-1">{record.notes}</p>
+                          <p className="text-sm text-gray-400 mt-1 truncate">{record.notes}</p>
                         )}
                       </div>
                     </div>
-                    <p className="text-gray-800 font-medium">
-                      NT$ {Number(record.amount).toLocaleString('zh-TW')}
-                    </p>
+                    <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                      <p className="text-gray-800 font-medium whitespace-nowrap">
+                        NT$ {Number(record.amount).toLocaleString('zh-TW')}
+                      </p>
+                      <button
+                        onClick={() => handleDelete(record.id)}
+                        disabled={isDeleting}
+                        className="p-1.5 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                        aria-label="刪除"
+                      >
+                        {isDeleting ? '⏳' : '🗑️'}
+                      </button>
+                    </div>
                   </div>
                 </li>
               );
@@ -136,6 +180,15 @@ export default function ExpensesPage() {
           </ul>
         )}
       </div>
+
+      {/* 新增浮動按鈕 */}
+      <button
+        onClick={() => router.push('/expenses/new')}
+        className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-indigo-600 text-white text-2xl shadow-lg hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center z-10"
+        aria-label="新增花費"
+      >
+        +
+      </button>
 
       {/* 底部導覽 */}
       <div className="h-16 bg-white border-t border-gray-200 flex justify-around items-center fixed bottom-0 left-0 right-0">
