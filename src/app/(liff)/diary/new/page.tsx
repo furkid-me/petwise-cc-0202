@@ -277,7 +277,7 @@ export default function NewDiaryPage() {
 
             <div className="border p-3 rounded-md bg-gray-50">
               <h3 className="font-medium mb-2 text-sm">搜尋並選擇食品（選填）</h3>
-              <FoodProductSearch onSelect={handleProductSelect} petType={activePet?.species ?? undefined} />
+              <FoodProductSearch onSelect={handleProductSelect} petType={activePet?.species?.toLowerCase() ?? undefined} />
             </div>
 
             <div>

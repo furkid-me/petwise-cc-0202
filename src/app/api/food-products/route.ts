@@ -83,8 +83,15 @@ export async function GET(request: NextRequest) {
           proteinPer100g: true,
           fatPer100g: true,
           carbsPer100g: true,
+          fiberPer100g: true,
+          moisturePer100g: true,
+          sodiumPer100g: true,
+          calciumPer100g: true,
+          phosphorusPer100g: true,
+          potassiumPer100g: true,
           mainIngredients: true,
           allergens: true,
+          fullIngredientsList: true,
           packageDesc: true,
           imageUrl: true
         }

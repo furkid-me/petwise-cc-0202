@@ -1,19 +1,40 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-// 示範資料
-const DEMO_PRODUCTS = [
-  { id: '1', name: '雞肉乾', brand: '皇家寵物食品', type: '零食', petType: ['dog_cat'], ageGroup: ['全齡'], origin: '台灣', caloriesPer100g: 164.5, proteinPer100g: 12.8, fatPer100g: 3.0, carbsPer100g: 0.8, fiberPer100g: 0.3, moisturePer100g: 18.5, ashPer100g: 2.1, sodiumPer100g: 215, calciumPer100g: 8, phosphorusPer100g: 98, potassiumPer100g: 180, magnesiumPer100g: 12, ironPer100g: 0.8, zincPer100g: 0.5, vitaminAPer100g: 0, vitaminDPer100g: 0, vitaminEPer100g: 0.1, omega3Per100g: 0.02, omega6Per100g: 0.5, taurinePer100g: 0, allergens: ['蛋'], ingredients: '100%雞胸肉、蛋黃、花椰菜、紅蘿蔔、維生素E保存劑', mainIngredients: ['雞肉'], specialTags: [], usageMethod: '請將零食撥開或剪成小塊', storageMethod: '冷藏保存' },
-  { id: '2', name: '頂級無穀貓糧', brand: '皇家寵物食品', type: '乾飼糧', petType: ['cat'], ageGroup: ['成年'], origin: '法國', caloriesPer100g: 380.0, proteinPer100g: 40.0, fatPer100g: 18.0, carbsPer100g: 25.0, fiberPer100g: 3.5, moisturePer100g: 8.0, ashPer100g: 8.0, sodiumPer100g: 8000, calciumPer100g: 1200, phosphorusPer100g: 1000, potassiumPer100g: 6500, magnesiumPer100g: 1000, ironPer100g: 150, zincPer100g: 120, vitaminAPer100g: 15000, vitaminDPer100g: 1500, vitaminEPer100g: 600, omega3Per100g: 2.5, omega6Per100g: 8.0, taurinePer100g: 1600, allergens: [], ingredients: '脫水雞肉、火雞肉、豌豆、馬鈴薯澱粉、雞脂肪', mainIngredients: ['雞肉', '火雞肉'], specialTags: ['無穀', '高蛋白'], usageMethod: '每日餵食量為體重的2-3%', storageMethod: '陰涼乾燥處' },
-  { id: '3', name: '天然狗罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['dog'], ageGroup: ['成年', '老年'], origin: '美國', caloriesPer100g: 120.0, proteinPer100g: 10.0, fatPer100g: 7.0, carbsPer100g: 5.0, fiberPer100g: 1.0, moisturePer100g: 78.0, ashPer100g: 2.5, sodiumPer100g: 4500, calciumPer100g: 200, phosphorusPer100g: 180, potassiumPer100g: 2500, magnesiumPer100g: 150, ironPer100g: 25, zincPer100g: 20, vitaminAPer100g: 50000, vitaminDPer100g: 500, vitaminEPer100g: 50, omega3Per100g: 0.5, omega6Per100g: 1.2, taurinePer100g: 0, allergens: ['玉米', '大豆'], ingredients: '牛肉湯、牛肉、雞肉、胡蘿蔔、豌豆', mainIngredients: ['牛肉', '胡蘿蔔'], specialTags: ['減肥'], usageMethod: '直接餵食或搭配乾糧', storageMethod: '開封後冷藏' },
-  { id: '4', name: '貓咪化毛膏', brand: '荒野饗宴', type: '補助食品', petType: ['cat'], ageGroup: ['全齡'], origin: '台灣', caloriesPer100g: 250.0, proteinPer100g: 5.0, fatPer100g: 15.0, carbsPer100g: 20.0, fiberPer100g: 3.0, moisturePer100g: 10.0, ashPer100g: 1.5, sodiumPer100g: 3000, calciumPer100g: 50, phosphorusPer100g: 40, potassiumPer100g: 800, magnesiumPer100g: 30, ironPer100g: 2, zincPer100g: 3, vitaminAPer100g: 1000, vitaminDPer100g: 50, vitaminEPer100g: 30, omega3Per100g: 2.0, omega6Per100g: 0.5, taurinePer100g: 500, allergens: ['魚'], ingredients: '麥芽糊精、魚油、纖維素、維生素', mainIngredients: ['魚油', '麥芽糊精'], specialTags: ['化毛'], usageMethod: '每日5cm供貓舔食', storageMethod: '陰涼乾燥處' },
-  { id: '5', name: '低敏無穀狗糧', brand: '本能', type: '乾飼糧', petType: ['dog'], ageGroup: ['全齡'], origin: '加拿大', caloriesPer100g: 360.0, proteinPer100g: 38.0, fatPer100g: 16.0, carbsPer100g: 28.0, fiberPer100g: 4.0, moisturePer100g: 10.0, ashPer100g: 7.5, sodiumPer100g: 6000, calciumPer100g: 1000, phosphorusPer100g: 800, potassiumPer100g: 5500, magnesiumPer100g: 800, ironPer100g: 100, zincPer100g: 100, vitaminAPer100g: 12000, vitaminDPer100g: 1000, vitaminEPer100g: 400, omega3Per100g: 3.0, omega6Per100g: 7.0, taurinePer100g: 0, allergens: [], ingredients: '野豬肉、鹿肉、地瓜、綠豌豆、鷹嘴豆', mainIngredients: ['野豬肉', '鹿肉', '地瓜'], specialTags: ['低敏', '無穀'], usageMethod: '依照包裝建議餵食量', storageMethod: '陰涼乾燥處' },
-  { id: '6', name: '老貓腎臟配方罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['cat'], ageGroup: ['老年'], origin: '美國', caloriesPer100g: 100.0, proteinPer100g: 8.0, fatPer100g: 4.0, carbsPer100g: 8.0, fiberPer100g: 0.5, moisturePer100g: 80.0, ashPer100g: 1.8, sodiumPer100g: 2500, calciumPer100g: 180, phosphorusPer100g: 150, potassiumPer100g: 3500, magnesiumPer100g: 80, ironPer100g: 25, zincPer100g: 20, vitaminAPer100g: 80000, vitaminDPer100g: 800, vitaminEPer100g: 120, omega3Per100g: 0.8, omega6Per100g: 1.5, taurinePer100g: 800, allergens: [], ingredients: '豬肉湯、豬肉、雞肝、雞肉、糙米', mainIngredients: ['豬肉', '雞肝', '雞肉'], specialTags: ['低磷', '老貓專用'], usageMethod: '每日2-3餐', storageMethod: '開封後冷藏' },
-  { id: '7', name: '幼犬專用飼料', brand: '冠能寵物食品', type: '乾飼糧', petType: ['dog'], ageGroup: ['幼年'], origin: '法國', caloriesPer100g: 350.0, proteinPer100g: 30.0, fatPer100g: 20.0, carbsPer100g: 30.0, fiberPer100g: 3.0, moisturePer100g: 8.0, ashPer100g: 7.0, sodiumPer100g: 7000, calciumPer100g: 1200, phosphorusPer100g: 1000, potassiumPer100g: 6000, magnesiumPer100g: 900, ironPer100g: 200, zincPer100g: 150, vitaminAPer100g: 20000, vitaminDPer100g: 1500, vitaminEPer100g: 500, omega3Per100g: 1.5, omega6Per100g: 5.0, taurinePer100g: 0, allergens: ['玉米', '大豆', '小麥'], ingredients: '脫水禽肉粉、雞肉粉、小麥、玉米、米', mainIngredients: ['雞肉粉', '小麥', '玉米', '米'], specialTags: ['幼犬專用'], usageMethod: '幼犬每日需分3-4餐', storageMethod: '陰涼乾燥處' },
-  { id: '8', name: '鮮食生鮮包', brand: '愛肯拿', type: '生鮮、冷凍', petType: ['dog_cat'], ageGroup: ['全齡'], origin: '台灣', caloriesPer100g: 180.0, proteinPer100g: 15.0, fatPer100g: 12.0, carbsPer100g: 3.0, fiberPer100g: 1.0, moisturePer100g: 68.0, ashPer100g: 1.5, sodiumPer100g: 1500, calciumPer100g: 100, phosphorusPer100g: 90, potassiumPer100g: 1200, magnesiumPer100g: 80, ironPer100g: 5, zincPer100g: 4, vitaminAPer100g: 5000, vitaminDPer100g: 100, vitaminEPer100g: 5, omega3Per100g: 1.0, omega6Per100g: 2.0, taurinePer100g: 200, allergens: [], ingredients: '雞胸肉、南瓜、胡蘿蔔、雞肝、藍莓', mainIngredients: ['雞胸肉', '南瓜', '胡蘿蔔'], specialTags: ['天然', '無穀'], usageMethod: '退冰後直接食用', storageMethod: '冷凍保存' },
-]
+type ApiProduct = {
+  id: string
+  name: string
+  brand: string
+  type: string
+  petType: string[]
+  origin: string | null
+  caloriesPer100g: string | number | null
+  proteinPer100g: string | number | null
+  fatPer100g: string | number | null
+  carbsPer100g: string | number | null
+  fiberPer100g?: string | number | null
+  moisturePer100g?: string | number | null
+  sodiumPer100g?: string | number | null
+  calciumPer100g?: string | number | null
+  phosphorusPer100g: string | number | null
+  potassiumPer100g?: string | number | null
+  mainIngredients: string[]
+  allergens: string[]
+  packageDesc: string | null
+  imageUrl: string | null
+  fullIngredientsList?: string | null
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
+  return debounced
+}
 
 const CATEGORIES = ['全部', '零食', '罐頭', '乾飼糧', '補助食品', '生鮮、冷凍', '潔牙骨']
 const ALLERGENS = ['雞肉', '蛋', '玉米', '大豆', '小麥', '牛肉', '羊肉', '魚', '火雞肉']
@@ -117,10 +138,15 @@ function PetFoodDBContent() {
   const [phosphorusRange, setPhosphorusRange] = useState<[number, number]>([0, 2000])
   
   const [showFilters, setShowFilters] = useState(false)
-  const [products, setProducts] = useState(DEMO_PRODUCTS)
-  const [selectedProduct, setSelectedProduct] = useState<typeof DEMO_PRODUCTS[0] | null>(null)
+  const [products, setProducts] = useState<ApiProduct[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<ApiProduct | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [brandFilter, setBrandFilter] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const debouncedSearch = useDebounce(search, 400)
 
   useEffect(() => {
     const brandParam = searchParams.get('brand')
@@ -131,63 +157,34 @@ function PetFoodDBContent() {
   }, [searchParams])
 
   useEffect(() => {
-    let filtered = DEMO_PRODUCTS
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
+    setLoading(true)
 
-    if (search) {
-      const s = search.toLowerCase()
-      filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(s) ||
-        p.brand.toLowerCase().includes(s) ||
-        p.mainIngredients.some(i => i.toLowerCase().includes(s))
-      )
+    const url = new URL('/api/food-products', window.location.origin)
+    const q = brandFilter ?? debouncedSearch
+    if (q) url.searchParams.set('q', q)
+    if (selectedPetType) url.searchParams.set('petType', selectedPetType)
+    if (selectedCategory !== '全部') url.searchParams.set('category', selectedCategory)
+    if (selectedAllergens.length > 0) url.searchParams.set('allergens', selectedAllergens.join(','))
+    url.searchParams.set('limit', '50')
+
+    const orderMap: Record<string, string> = {
+      'name-asc': 'name',
     }
+    if (orderMap[sortBy]) url.searchParams.set('orderBy', orderMap[sortBy])
 
-    if (brandFilter) {
-      filtered = filtered.filter(p => p.brand.includes(brandFilter))
-    }
-
-    filtered = filtered.filter(p => !p.brand.includes('【個人】'))
-
-    if (selectedPetType) {
-      filtered = filtered.filter(p => p.petType.includes(selectedPetType))
-    }
-
-    if (selectedAge && selectedAge !== '全部') {
-      filtered = filtered.filter(p => p.ageGroup.includes(selectedAge))
-    }
-
-    if (selectedCategory && selectedCategory !== '全部') {
-      filtered = filtered.filter(p => p.type === selectedCategory)
-    }
-
-    if (selectedAllergens.length > 0) {
-      filtered = filtered.filter(p => !p.allergens.some(a => selectedAllergens.includes(a)))
-    }
-
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(p => selectedTags.every(t => p.specialTags.includes(t)))
-    }
-
-    filtered = filtered.filter(p => {
-      if (p.caloriesPer100g < calorieRange[0] || p.caloriesPer100g > calorieRange[1]) return false
-      if (p.proteinPer100g < proteinRange[0] || p.proteinPer100g > proteinRange[1]) return false
-      if (p.fatPer100g < fatRange[0] || p.fatPer100g > fatRange[1]) return false
-      if (p.phosphorusPer100g < phosphorusRange[0] || p.phosphorusPer100g > phosphorusRange[1]) return false
-      return true
-    })
-
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'calories-asc': return a.caloriesPer100g - b.caloriesPer100g
-        case 'calories-desc': return b.caloriesPer100g - a.caloriesPer100g
-        case 'protein-desc': return b.proteinPer100g - a.proteinPer100g
-        case 'name-asc': return a.name.localeCompare(b.name)
-        default: return 0
-      }
-    })
-
-    setProducts(filtered)
-  }, [search, selectedPetType, selectedAge, selectedCategory, selectedAllergens, selectedTags, sortBy, calorieRange, proteinRange, fatRange, phosphorusRange, brandFilter])
+    fetch(url.toString(), { signal: abortRef.current.signal })
+      .then(res => res.json())
+      .then(data => {
+        setProducts(data?.data?.products ?? [])
+        setTotal(data?.data?.pagination?.total ?? 0)
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name !== 'AbortError') setProducts([])
+      })
+      .finally(() => setLoading(false))
+  }, [debouncedSearch, brandFilter, selectedPetType, selectedCategory, selectedAllergens, sortBy])
 
   const toggleAllergen = (allergen: string) => {
     setSelectedAllergens(prev => prev.includes(allergen) ? prev.filter(a => a !== allergen) : [...prev, allergen])
@@ -431,7 +428,7 @@ function PetFoodDBContent() {
       {/* Results */}
       <div style={{ padding: `${DESIGN.spacing.md} ${DESIGN.spacing.md} ${DESIGN.spacing.sm}` }}>
         <p style={{ fontSize: '13px', color: DESIGN.colors.textMuted }}>
-          共 <strong style={{ color: DESIGN.colors.text }}>{products.length}</strong> 項產品
+          {loading ? '搜尋中...' : <>共 <strong style={{ color: DESIGN.colors.text }}>{total}</strong> 項產品（顯示前 {products.length} 筆）</>}
         </p>
       </div>
 
@@ -572,7 +569,7 @@ function PetFoodDBContent() {
             {/* Ingredients */}
             <div style={{ padding: DESIGN.spacing.md, borderBottom: `1px solid ${DESIGN.colors.border}` }}>
               <h3 style={{ fontSize: '12px', fontWeight: '600', color: DESIGN.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: DESIGN.spacing.sm }}>完整成分</h3>
-              <p style={{ fontSize: '14px', lineHeight: 1.6, color: DESIGN.colors.text }}>{selectedProduct.ingredients}</p>
+              <p style={{ fontSize: '14px', lineHeight: 1.6, color: DESIGN.colors.text }}>{selectedProduct.fullIngredientsList ?? '—'}</p>
             </div>
 
             {selectedProduct.allergens.length > 0 && (
