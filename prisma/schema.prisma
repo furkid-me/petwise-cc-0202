@@ -353,9 +353,17 @@ model DietRecord {
   // 實際餵食時間
   userId          String       @map("user_id") @db.Uuid
   petId           String       @map("pet_id") @db.Uuid
-  foodProductId   String?      @map("food_product_id") @db.Uuid
+  foodProductId       String?      @map("food_product_id") @db.Uuid
   // 若無對應產品則為 null
-  foodName        String       @map("food_name") @db.Text
+  quantity            Float?       @map("quantity")
+  // 克數（搭配 foodProduct 使用）
+  calculatedCalories  Float?       @map("calculated_calories")
+  // 自動計算熱量（kcal）
+  calculatedProtein   Float?       @map("calculated_protein")
+  // 自動計算蛋白質（g）
+  calculatedFat       Float?       @map("calculated_fat")
+  // 自動計算脂肪（g）
+  foodName            String       @map("food_name") @db.Text
   foodType        String       @map("food_type") @db.Text
   amountValue     Decimal      @map("amount_value") @db.Decimal(6, 2)
   amountUnit      String       @map("amount_unit") @db.Text

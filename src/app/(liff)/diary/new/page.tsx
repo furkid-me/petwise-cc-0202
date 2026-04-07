@@ -10,6 +10,8 @@ interface FoodProduct {
   name: string;
   brand: string;
   kcalPer100g: number;
+  proteinPer100g?: number;
+  fatPer100g?: number;
   imageURL: string;
   type: string;
 }
@@ -28,6 +30,11 @@ interface FormData {
   photoUrl: string;
   mainIngredients: string[];
   kcalPer100g: number | null;
+  proteinPer100g: number | null;
+  fatPer100g: number | null;
+  calculatedCalories: string;
+  calculatedProtein: string;
+  calculatedFat: string;
 }
 
 export default function NewDiaryPage() {
@@ -51,6 +58,11 @@ export default function NewDiaryPage() {
     photoUrl: '',
     mainIngredients: [],
     kcalPer100g: null,
+    proteinPer100g: null,
+    fatPer100g: null,
+    calculatedCalories: '',
+    calculatedProtein: '',
+    calculatedFat: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,17 +79,28 @@ export default function NewDiaryPage() {
     }
   }, [user, currentPetId, router]);
 
+  const calcNutrition = (
+    amount: number,
+    kcal: number | null,
+    protein: number | null,
+    fat: number | null
+  ) => ({
+    totalKcal: kcal != null ? (kcal * amount / 100).toFixed(2) : '',
+    calculatedCalories: kcal != null ? (kcal * amount / 100).toFixed(2) : '',
+    calculatedProtein: protein != null ? (protein * amount / 100).toFixed(2) : '',
+    calculatedFat: fat != null ? (fat * amount / 100).toFixed(2) : '',
+  });
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      // 當輸入份量時，自動計算熱量
-      if (name === 'amountValue' && prev.kcalPer100g && value) {
+      if (name === 'amountValue' && value) {
         const amount = parseFloat(value);
         if (!isNaN(amount)) {
-          updated.totalKcal = (prev.kcalPer100g * amount / 100).toFixed(2);
+          Object.assign(updated, calcNutrition(amount, prev.kcalPer100g, prev.proteinPer100g, prev.fatPer100g));
         }
       }
       return updated;
@@ -87,16 +110,18 @@ export default function NewDiaryPage() {
   const handleProductSelect = (product: FoodProduct) => {
     setFormData((prev) => {
       const amount = parseFloat(prev.amountValue);
-      const calculatedKcal = product.kcalPer100g && !isNaN(amount)
-        ? (product.kcalPer100g * amount / 100).toFixed(2)
-        : prev.totalKcal;
+      const nutrition = !isNaN(amount)
+        ? calcNutrition(amount, product.kcalPer100g, product.proteinPer100g ?? null, product.fatPer100g ?? null)
+        : { totalKcal: prev.totalKcal, calculatedCalories: prev.calculatedCalories, calculatedProtein: prev.calculatedProtein, calculatedFat: prev.calculatedFat };
       return {
         ...prev,
         foodProductId: product.id,
         foodName: product.name,
         foodType: product.type,
         kcalPer100g: product.kcalPer100g,
-        totalKcal: calculatedKcal,
+        proteinPer100g: product.proteinPer100g ?? null,
+        fatPer100g: product.fatPer100g ?? null,
+        ...nutrition,
       };
     });
   };
@@ -134,7 +159,11 @@ export default function NewDiaryPage() {
           foodType: formData.foodType,
           amountValue: formData.amountValue,
           amountUnit: formData.amountUnit,
+          quantity: formData.amountUnit === '克' && formData.amountValue ? parseFloat(formData.amountValue) : null,
           totalKcal: formData.totalKcal || null,
+          calculatedCalories: formData.calculatedCalories ? parseFloat(formData.calculatedCalories) : null,
+          calculatedProtein: formData.calculatedProtein ? parseFloat(formData.calculatedProtein) : null,
+          calculatedFat: formData.calculatedFat ? parseFloat(formData.calculatedFat) : null,
           drankWaterMl: formData.drankWaterMl || null,
           specialReaction: formData.specialReaction || null,
           photoUrl: formData.photoUrl || null,
@@ -289,6 +318,17 @@ export default function NewDiaryPage() {
                 onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                 step="1" />
             </div>
+
+            {(formData.calculatedCalories || formData.calculatedProtein || formData.calculatedFat) && (
+              <div className="bg-indigo-50 border border-indigo-100 rounded-md p-3 text-sm">
+                <p className="font-medium text-indigo-700 mb-1">營養試算（依份量自動計算）</p>
+                <div className="flex gap-4 text-indigo-600">
+                  {formData.calculatedCalories && <span>🔥 {formData.calculatedCalories} kcal</span>}
+                  {formData.calculatedProtein && <span>💪 蛋白質 {formData.calculatedProtein}g</span>}
+                  {formData.calculatedFat && <span>🥑 脂肪 {formData.calculatedFat}g</span>}
+                </div>
+              </div>
+            )}
             <div>
               <label htmlFor="drankWaterMl" className="block text-sm font-medium text-gray-700">飲水量 (ml)</label>
               <input type="number" id="drankWaterMl" name="drankWaterMl" value={formData.drankWaterMl}

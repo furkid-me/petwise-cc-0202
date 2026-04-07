@@ -1,19 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-
-// 從食品資料庫 Demo 資料
-const DEMO_PRODUCTS: FoodProduct[] = [
-  { id: '1', name: '雞肉乾', brand: '皇家寵物食品', type: '零食', petType: ['dog_cat'], origin: '台灣', kcalPer100g: 164.5, proteinPer100g: 12.8, fatPer100g: 3.0, carbsPer100g: 0.8, allergens: ['蛋'], mainIngredients: ['雞肉'], imageURL: '' },
-  { id: '2', name: '頂級無穀貓糧', brand: '皇家寵物食品', type: '乾飼糧', petType: ['cat'], origin: '法國', kcalPer100g: 380.0, proteinPer100g: 40.0, fatPer100g: 18.0, carbsPer100g: 25.0, allergens: [], mainIngredients: ['雞肉', '火雞肉'], imageURL: '' },
-  { id: '3', name: '天然狗罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['dog'], origin: '美國', kcalPer100g: 120.0, proteinPer100g: 10.0, fatPer100g: 7.0, carbsPer100g: 5.0, allergens: ['玉米', '大豆'], mainIngredients: ['牛肉', '胡蘿蔔'], imageURL: '' },
-  { id: '4', name: '貓咪化毛膏', brand: '荒野饗宴', type: '補助食品', petType: ['cat'], origin: '台灣', kcalPer100g: 250.0, proteinPer100g: 5.0, fatPer100g: 15.0, carbsPer100g: 20.0, allergens: ['魚'], mainIngredients: ['魚油', '麥芽糊精'], imageURL: '' },
-  { id: '5', name: '低敏無穀狗糧', brand: '本能', type: '乾飼糧', petType: ['dog'], origin: '加拿大', kcalPer100g: 360.0, proteinPer100g: 38.0, fatPer100g: 16.0, carbsPer100g: 28.0, allergens: [], mainIngredients: ['野豬肉', '鹿肉', '地瓜'], imageURL: '' },
-  { id: '6', name: '老貓腎臟配方罐頭', brand: '希爾思寵物食品', type: '罐頭', petType: ['cat'], origin: '美國', kcalPer100g: 100.0, proteinPer100g: 8.0, fatPer100g: 4.0, carbsPer100g: 8.0, allergens: [], mainIngredients: ['豬肉', '雞肝', '雞肉'], imageURL: '' },
-  { id: '7', name: '幼犬專用飼料', brand: '冠能寵物食品', type: '乾飼糧', petType: ['dog'], origin: '法國', kcalPer100g: 350.0, proteinPer100g: 30.0, fatPer100g: 20.0, carbsPer100g: 30.0, allergens: ['玉米', '大豆', '小麥'], mainIngredients: ['雞肉粉', '小麥', '玉米', '米'], imageURL: '' },
-  { id: '8', name: '鮮食生鮮包', brand: '愛肯拿', type: '生鮮、冷凍', petType: ['dog_cat'], origin: '台灣', kcalPer100g: 180.0, proteinPer100g: 15.0, fatPer100g: 12.0, carbsPer100g: 3.0, allergens: [], mainIngredients: ['雞胸肉', '南瓜', '胡蘿蔔'], imageURL: '' },
-]
 
 interface FoodProduct {
   id: string;
@@ -59,6 +47,7 @@ export default function FoodProductSearch({ onSelect, initialQuery = '', petType
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const debouncedQuery = useDebounce(query, 300);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!debouncedQuery.trim()) {
@@ -67,27 +56,58 @@ export default function FoodProductSearch({ onSelect, initialQuery = '', petType
       return;
     }
 
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
     setLoading(true);
-    const s = debouncedQuery.toLowerCase();
-    
-    // 從 DEMO_PRODUCTS 搜尋
-    const filtered = DEMO_PRODUCTS.filter(p => {
-      // 寵物類型篩選
-      if (petType && p.petType && !p.petType.includes(petType) && !p.petType.includes('dog_cat')) {
-        return false;
-      }
-      
-      // 關鍵字搜尋
-      return (
-        p.name.toLowerCase().includes(s) ||
-        p.brand.toLowerCase().includes(s) ||
-        p.mainIngredients?.some(i => i.toLowerCase().includes(s))
-      );
-    });
-    
-    setResults(filtered);
-    setShowDropdown(true);
-    setLoading(false);
+
+    const url = new URL('/api/food-products', window.location.origin);
+    url.searchParams.set('q', debouncedQuery);
+    url.searchParams.set('limit', '10');
+    if (petType) url.searchParams.set('petType', petType);
+
+    fetch(url.toString(), { signal: abortRef.current.signal })
+      .then((res) => res.json())
+      .then((data) => {
+        const rawProducts = data?.data?.products ?? [];
+        const mapped: FoodProduct[] = rawProducts.map((p: {
+          id: string;
+          name: string;
+          brand: string;
+          type: string;
+          petType?: string[];
+          origin?: string;
+          caloriesPer100g?: string | number | null;
+          proteinPer100g?: string | number | null;
+          fatPer100g?: string | number | null;
+          carbsPer100g?: string | number | null;
+          allergens?: string[];
+          mainIngredients?: string[];
+          imageUrl?: string;
+        }) => ({
+          id: p.id,
+          name: p.name,
+          brand: p.brand,
+          type: p.type,
+          petType: p.petType,
+          origin: p.origin,
+          kcalPer100g: p.caloriesPer100g != null ? Number(p.caloriesPer100g) : 0,
+          proteinPer100g: p.proteinPer100g != null ? Number(p.proteinPer100g) : undefined,
+          fatPer100g: p.fatPer100g != null ? Number(p.fatPer100g) : undefined,
+          carbsPer100g: p.carbsPer100g != null ? Number(p.carbsPer100g) : undefined,
+          allergens: p.allergens,
+          mainIngredients: p.mainIngredients,
+          imageURL: p.imageUrl ?? '',
+        }));
+        setResults(mapped);
+        setShowDropdown(true);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          setResults([]);
+          setShowDropdown(true);
+        }
+      })
+      .finally(() => setLoading(false));
   }, [debouncedQuery, petType]);
 
   const handleSelect = (product: FoodProduct) => {
