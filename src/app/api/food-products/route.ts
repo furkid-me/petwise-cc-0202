@@ -23,7 +23,12 @@ export async function GET(request: NextRequest) {
     
     // 建立查詢條件
     const where: any = {}
-    
+
+    // 沒有搜尋 query 時，預設排除個人品牌（仍可被關鍵字搜尋到）
+    if (!query) {
+      where.brand = { not: { startsWith: '【個人】' } }
+    }
+
     if (query) {
       where.OR = [
         { name: { contains: query, mode: 'insensitive' } },

@@ -5,7 +5,13 @@ import prisma from '@/lib/prisma'
 export async function GET() {
   try {
     const brands = await prisma.foodBrand.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        // 排除個人品牌
+        NOT: { name: { startsWith: '【個人】' } },
+        // 只顯示有產品的品牌
+        products: { some: {} },
+      },
       orderBy: { name: 'asc' },
       select: {
         id: true,
