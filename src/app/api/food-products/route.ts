@@ -24,6 +24,12 @@ export async function GET(request: NextRequest) {
     // 建立查詢條件
     const where: any = {}
 
+    // 永遠排除：空名稱、三大營養全 null 的無意義產品
+    where.name = { not: '' }
+    const notConditions: any[] = [
+      { AND: [{ caloriesPer100g: null }, { proteinPer100g: null }, { fatPer100g: null }] }
+    ]
+
     // 沒有搜尋 query 時，預設排除個人品牌（仍可被關鍵字搜尋到）
     if (!query) {
       where.brand = { not: { startsWith: '【個人】' } }
@@ -36,40 +42,39 @@ export async function GET(request: NextRequest) {
         { fullIngredientsList: { contains: query, mode: 'insensitive' } }
       ]
     }
-    
+
     if (petType) {
       where.petType = { has: petType }
     }
-    
+
     if (category) {
       where.type = category
     }
-    
+
     if (brand) {
       where.brand = { contains: brand, mode: 'insensitive' }
     }
-    
+
     if (origin) {
       where.origin = origin
     }
-    
+
     if (minProtein) {
       where.proteinPer100g = { gte: parseFloat(minProtein) }
     }
-    
+
     if (maxCalories) {
       where.caloriesPer100g = { lte: parseFloat(maxCalories) }
     }
-    
+
     if (allergens) {
-      const allergenList = allergens.split(',').map(a => a.trim())
-      where.NOT = {
-        allergens: {
-          hasSome: allergenList
-        }
-      }
+      const allergenList = allergens.split(',').map((a: string) => a.trim())
+      notConditions.push({ allergens: { hasSome: allergenList } })
     }
-    
+
+    // 合併 NOT 條件（避免多個 NOT 互蓋）
+    where.NOT = notConditions.length === 1 ? notConditions[0] : notConditions
+
     // 查詢資料庫
     const [products, total] = await Promise.all([
       prisma.foodProduct.findMany({
