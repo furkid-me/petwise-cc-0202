@@ -473,8 +473,14 @@ function PetFoodDBContent() {
                 { label: '磷', value: product.phosphorusPer100g, unit: 'mg' },
               ].map((item, i) => (
                 <div key={i} style={{ background: DESIGN.colors.bg, borderRadius: DESIGN.radius.sm, padding: '8px 4px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '15px', fontWeight: '700', color: DESIGN.colors.primary }}>{item.value}</div>
-                  <div style={{ fontSize: '10px', color: DESIGN.colors.textMuted }}>{item.unit}</div>
+                  {item.value != null && item.value !== '' ? (
+                    <>
+                      <div style={{ fontSize: '15px', fontWeight: '700', color: DESIGN.colors.primary }}>{Number(item.value)}</div>
+                      <div style={{ fontSize: '10px', color: DESIGN.colors.textMuted }}>{item.unit}</div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '15px', fontWeight: '400', color: DESIGN.colors.textMuted }}>—</div>
+                  )}
                 </div>
               ))}
             </div>
